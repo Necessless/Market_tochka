@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import uvicorn
+from core.models import Base, User
 from sqlalchemy import text
 from core.config import settings
 from api import router as api_router
