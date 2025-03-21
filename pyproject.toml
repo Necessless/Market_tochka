@@ -14,5 +14,4 @@ psycopg-binary = "^3.2.6"
 alembic = "^1.15.1"
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
 
