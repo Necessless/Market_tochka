@@ -7,6 +7,7 @@ from core.database import db_helper
 
 
 app = FastAPI()
+
 @app.get("/")
 async def root():
     return {"message": "Сервер запущен"}
