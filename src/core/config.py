@@ -27,4 +27,5 @@ class Settings(BaseSettings):
     api: ApiPrefix = ApiPrefix()
     db: DatabaseConfig
 
+
 settings = Settings()

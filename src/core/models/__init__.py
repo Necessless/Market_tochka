@@ -4,4 +4,4 @@ __all__ = (
 )
 
 from .base import Base
-from api.Users.models import User
+from src.api.Users.models import User
