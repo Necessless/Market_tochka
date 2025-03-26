@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import uvicorn
 from core.config import settings
-from api import router as api_router
+from api_v1 import router as api_router
 from core.database import db_helper
 
 @asynccontextmanager
@@ -19,10 +19,9 @@ main_app = FastAPI(lifespan=lifespan)
 async def root():
     return {"message": "Сервер запущен"}
 
-main_app.include_router(
-    api_router,
-    prefix = settings.api.prefix,
-)
+main_app.include_router(api_router, prefix=settings.api.prefix)
+
+
 
 if __name__ == "__main__":
     uvicorn.run(
