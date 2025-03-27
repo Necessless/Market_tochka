@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import (APIRouter, Depends,)
 from core.database import db_helper
-from .schemas import (UserGet, UserCreate,)
+from .schemas import (UserBase, NewUser,)
 from sqlalchemy.ext.asyncio import AsyncSession
 from .service import (get_all_users, create_user, api_key_header, get_user,)
 
@@ -9,7 +9,7 @@ from .service import (get_all_users, create_user, api_key_header, get_user,)
 router = APIRouter()
 
 
-@router.get("/", response_model=List[UserGet])
+@router.get("/", response_model=List[UserBase])
 async def get_users(
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
@@ -17,16 +17,16 @@ async def get_users(
     return users
 
 
-@router.post("/register", response_model=UserGet)
+@router.post("/register", response_model=UserBase)
 async def register_user(
-    data: UserCreate,
+    data: NewUser,
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     user = await create_user(session=session, data=data)
     return user
 
 
-@router.get("/profile", response_model=UserGet)
+@router.get("/profile", response_model=UserBase)
 async def get_curent_user(
     authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter)

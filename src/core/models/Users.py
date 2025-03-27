@@ -2,6 +2,7 @@ from enum import Enum
 from sqlalchemy.orm import Mapped, mapped_column
 from core.models.base import Base
 
+
 class AuthRole(Enum):
     USER = "USER"
     ADMIN = "ADMIN"
