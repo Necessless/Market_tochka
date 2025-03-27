@@ -20,7 +20,7 @@ async def get_user(
     if not user:
         raise HTTPException(
             status_code=401, 
-            detail="User with this Api key is not exists"
+            detail="Wrong Authentication token"
             )
     return UserBase(
         id=user.id,
@@ -45,13 +45,6 @@ async def create_user(
         role=user.role,
         api_key=public_key
     )
-
-
-def api_key_header(authorization: str = Header(...)):
-    if not authorization.startswith("TOKEN "):
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-    token = authorization.split(" ")[1]
-    return token
 
 
 async def get_all_users(

@@ -7,11 +7,13 @@ class RunConfig(BaseModel):
 
 class ApiV1Prefix(BaseModel):
     prefix: str = "/v1"
-    public: str = "/public"
+    
 
 class ApiPrefix(BaseModel):
     prefix: str = "/api"
     v1: ApiV1Prefix = ApiV1Prefix()
+    public: str = "/public"
+    admin: str = "/admin"
 
 class HashConfig(BaseModel):
     salt: str 

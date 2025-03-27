@@ -3,7 +3,8 @@ from fastapi import (APIRouter, Depends,)
 from core.database import db_helper
 from .schemas import (UserBase, NewUser,)
 from sqlalchemy.ext.asyncio import AsyncSession
-from .service import (get_all_users, create_user, api_key_header, get_user,)
+from .service import (get_all_users, create_user, get_user,)
+from .dependencies import api_key_header
 
 
 router = APIRouter()
