@@ -1,8 +1,9 @@
 from fastapi import HTTPException, Header
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from typing import Sequence
-from core.models import User
-from .schemas import UserBase, NewUser
+from core.models import User, Balance, Instrument
+from .schemas import UserBase, NewUser, Instrument_Balance
 from sqlalchemy.ext.asyncio import AsyncSession 
 from .auth import (
     generate_api_key,
@@ -52,4 +53,17 @@ async def get_all_users(
 ) -> Sequence[User]:
     statement = select(User).order_by(User.id)
     result = await session.scalars(statement)
+    return result.all()
+
+
+async def get_balance_for_user(
+        session: AsyncSession,
+        token: str
+) -> Sequence[User]:
+    #ДОПИСАТЬ
+    user = await get_user(session, token)
+    statement = select(User).options(selectinload(User.instruments))
+    result = await session.scalars(statement)
+    if not result:
+        raise HTTPException(status_code=404, detail="Wallet for this user is not exists")
     return result.all()

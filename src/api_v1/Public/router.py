@@ -28,7 +28,7 @@ async def register_user(
 
 
 @router.get("/profile", response_model=UserBase)
-async def get_curent_user(
+async def get_current_user(
     authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):

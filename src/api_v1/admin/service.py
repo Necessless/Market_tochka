@@ -4,6 +4,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models.Users import User
 from api_v1.Public.schemas import UserBase
+from .schemas import Instrument_POST
+from core.models import Instrument
 
 
 async def service_delete_user(
@@ -23,3 +25,16 @@ async def service_delete_user(
         api_key=user_to_delete.api_key
     )
 
+
+async def create_instrument(
+        name: str,
+        ticker: str,
+        session: AsyncSession
+) -> Instrument_POST:
+    instrument = Instrument(name=name, ticker=ticker)
+    session.add(instrument)
+    await session.commit()
+    return Instrument_POST(
+        name=instrument.name,
+        ticker=instrument.ticker
+    )
