@@ -17,10 +17,10 @@ class NewUser(BaseModel):
     role: AuthRole = Field(default=AuthRole.USER)
 
 
-class Instrument_Balance(BaseModel):
+class Instrument_Public(BaseModel):
     ticker: str = Field(min_length=3, pattern=r"^[A-Z]{2,10}$")
     quantity: int = Field(ge=0)
 
 
 class Balance(BaseModel):
-    instruments: List[Instrument_Balance]
+    instruments: List[Instrument_Public]

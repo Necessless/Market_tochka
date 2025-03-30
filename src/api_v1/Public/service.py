@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from typing import Sequence
 from core.models import User, Balance, Instrument
-from .schemas import UserBase, NewUser, Instrument_Balance
+from .schemas import UserBase, NewUser, Instrument_Public
 from sqlalchemy.ext.asyncio import AsyncSession 
 from .auth import (
     generate_api_key,
