@@ -16,8 +16,8 @@ async def get_user(
         token: str
 ) -> UserBase:
     hashed_token = hash_api_key(token)
-    statement = select(User).where(User.api_key==hashed_token)
-    user = await session.scalar(statement)
+    query = select(User).where(User.api_key == hashed_token)
+    user = await session.scalar(query)
     if not user:
         raise HTTPException(
             status_code=401, 
@@ -51,8 +51,8 @@ async def create_user(
 async def get_all_users(
         session: AsyncSession
 ) -> Sequence[User]:
-    statement = select(User).order_by(User.id)
-    result = await session.scalars(statement)
+    query = select(User).order_by(User.id)
+    result = await session.scalars(query)
     return result.all()
 
 
@@ -62,8 +62,8 @@ async def get_balance_for_user(
 ) -> Sequence[User]:
     #ДОПИСАТЬ
     user = await get_user(session, token)
-    statement = select(User).options(selectinload(User.instruments))
-    result = await session.scalars(statement)
+    query = select(User).options(selectinload(User.instruments))
+    result = await session.scalars(query)
     if not result:
         raise HTTPException(status_code=404, detail="Wallet for this user is not exists")
     return result.all()

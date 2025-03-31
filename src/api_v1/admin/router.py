@@ -6,10 +6,10 @@ from .dependencies import is_admin_user
 from api_v1.Public.dependencies import api_key_header
 from api_v1.Public.service import get_user
 from api_v1.Public.schemas import UserBase
-from .schemas import Instrument_GET_POST
+from .schemas import Instrument
 from .service import service_delete_user, create_instrument
 
-router = APIRouter()
+router = APIRouter(tags=["admin"])
 
 @router.delete("/user/{user_id}", response_model=UserBase)
 async def delete_user(
@@ -23,9 +23,9 @@ async def delete_user(
         return res
 
 
-@router.post("/instrument", response_model=Instrument_GET_POST)
+@router.post("/instrument", response_model=Instrument)
 async def post_instrument(
-    data: Instrument_GET_POST,
+    data: Instrument,
     authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):

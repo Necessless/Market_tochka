@@ -4,13 +4,13 @@ from sqlalchemy import select
 from core.database import db_helper
 from core.models import Instrument
 from .schemas import (UserBase, NewUser,)
-from api_v1.admin.schemas import Instrument_GET_POST
+from api_v1.admin.schemas import Instrument
 from sqlalchemy.ext.asyncio import AsyncSession
 from .service import (get_all_users, create_user, get_user,)
 from .dependencies import api_key_header
 
 
-router = APIRouter()
+router = APIRouter(tags=["public"])
 
 
 @router.get("/", response_model=List[UserBase])
@@ -43,7 +43,7 @@ async def get_current_user(
     return user
 
 
-@router.get("/instrument", response_model=List[Instrument_GET_POST])
+@router.get("/instrument", response_model=List[Instrument])
 async def get_all_instruments(
     session: AsyncSession = Depends(db_helper.session_getter)
 ):

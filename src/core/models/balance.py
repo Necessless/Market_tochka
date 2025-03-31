@@ -5,16 +5,18 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 import uuid
 
 
+
 class Balance(Base):
-    __tablename__ = "users_balances"
+    __tablename__ = "users_balance"
+
+    id = None
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("Users.id", ondelete="CASCADE")
+        ForeignKey("Users.id", ondelete="CASCADE"),
+        primary_key=True
     )
-    instrument_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("instruments.id", ondelete="CASCADE"), 
-        nullable=True
+    instrument_ticker: Mapped[str] = mapped_column(
+        ForeignKey("instruments.ticker", ondelete="CASCADE"), 
+        primary_key=True
     )
     quantity: Mapped[int]
-
-    __table_args__ = (UniqueConstraint("user_id", "instrument_id", name="uq_user_instrument"),)
