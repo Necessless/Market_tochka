@@ -3,20 +3,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from typing import Sequence
 from core.models import User, Balance, Instrument
-from .schemas import UserBase, NewUser, Instrument_Public
+from .schemas import UserBase, NewUser, UserRegister
 from sqlalchemy.ext.asyncio import AsyncSession 
 from .auth import (
-    generate_api_key,
-    hash_api_key,
+    create_token
 )
 
 
 async def get_user(
         session: AsyncSession,
-        token: str
+        name: str,
 ) -> UserBase:
-    hashed_token = hash_api_key(token)
-    query = select(User).where(User.api_key == hashed_token)
+    
+    query = select(User).where(User.name == name)
     user = await session.scalar(query)
     if not user:
         raise HTTPException(
@@ -27,24 +26,24 @@ async def get_user(
         id=user.id,
         name=user.name,
         role=user.role,
-        api_key=user.api_key
     )
 
 
 async def create_user(
         session: AsyncSession,
         data: NewUser
-) -> UserBase:
-    public_key = generate_api_key()
-    private_key = hash_api_key(public_key)
-    user = User(name=data.name, role=data.role, api_key=private_key)
+) -> UserRegister:
+    
+    to_encrypt = {"name": data.name}
+    token = create_token(to_encrypt)
+    user = User(name=data.name, role=data.role)
     session.add(user)
     await session.commit()
-    return UserBase(
+    return UserRegister(
         id=user.id,
         name=user.name,
         role=user.role,
-        api_key=public_key
+        api_key=token
     )
 
 

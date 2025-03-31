@@ -1,14 +1,26 @@
-import hashlib
-import hmac
-import secrets
+from typing import Annotated
+from fastapi import Depends, HTTPException, Header
+from fastapi.security import OAuth2PasswordBearer
+import jwt
 from core.config import settings
+from passlib.context import CryptContext
 
-__salt = settings.hash.salt
-SECRET_KEY = __salt.encode()
+SECRET_KEY = settings.hash.secret
+ALGORITHM = settings.hash.algorithm
 
-def generate_api_key():
-    return "key-" + secrets.token_hex(16) 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def hash_api_key(api_key: str) -> str:
-    """Хеш с помощью SHA-256"""
-    return hmac.new(SECRET_KEY, api_key.encode(), hashlib.sha256).hexdigest()
+
+def create_token(data: dict) -> str:
+    to_encode = data.copy()
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def api_key_header(authorization: str = Header(...)) -> str:
+    if not authorization.startswith("TOKEN "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    token = authorization.split(" ")[1]
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    user_name = payload.get("name")
+    return user_name

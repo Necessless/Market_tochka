@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import db_helper
 from .Public.service import get_balance_for_user
 from core.config import settings
-from .Public.dependencies import api_key_header
+from .Public.auth import api_key_header
 from .Public.router import router as public_router
 from .admin.router import router as admin_router
 

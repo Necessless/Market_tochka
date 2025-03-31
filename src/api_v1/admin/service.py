@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models.Users import User
 from api_v1.Public.schemas import UserBase
-from .schemas import Instrument as instrument_schema, Ok
+from .schemas import Instrument_Base, Ok
 from core.models import Instrument
 
 
@@ -30,11 +30,11 @@ async def create_instrument(
         name: str,
         ticker: str,
         session: AsyncSession
-) -> instrument_schema:
+) -> Instrument_Base:
     instrument = Instrument(name=name, ticker=ticker)
     session.add(instrument)
     await session.commit()
-    return instrument_schema(
+    return Instrument_Base(
         name=instrument.name,
         ticker=instrument.ticker
     )

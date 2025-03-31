@@ -4,11 +4,13 @@ import uuid
 from typing import List
 from core.models import Instrument
 
-
 class UserBase(BaseModel):
     id: uuid.UUID
     name: str 
     role: AuthRole 
+
+
+class UserRegister(UserBase):
     api_key: str 
 
 

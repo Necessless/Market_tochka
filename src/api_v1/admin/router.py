@@ -3,10 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import db_helper
 from uuid import UUID
 from .dependencies import is_admin_user
-from api_v1.Public.dependencies import api_key_header
+from api_v1.Public.auth import api_key_header
 from api_v1.Public.service import get_user
 from api_v1.Public.schemas import UserBase
-from .schemas import Instrument, Ok
+from .schemas import Instrument_Base, Ok
 from .service import (
     service_delete_user,
     create_instrument, 
@@ -27,9 +27,9 @@ async def delete_user(
         return res
 
 
-@router.post("/instrument", response_model=Instrument)
+@router.post("/instrument", response_model=Instrument_Base)
 async def post_instrument(
-    data: Instrument,
+    data: Instrument_Base,
     authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):

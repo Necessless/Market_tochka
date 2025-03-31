@@ -1,9 +1,11 @@
 from pydantic import BaseModel, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class RunConfig(BaseModel):
     host: str = "0.0.0.0"
     port: int = 8000
+
 
 class ApiV1Prefix(BaseModel):
     prefix: str = "/v1"
@@ -15,8 +17,11 @@ class ApiPrefix(BaseModel):
     public: str = "/public"
     admin: str = "/admin"
 
+
 class HashConfig(BaseModel):
-    salt: str 
+    secret: str
+    algorithm: str
+
 
 class DatabaseConfig(BaseModel):
     url: PostgresDsn
@@ -31,6 +36,7 @@ class DatabaseConfig(BaseModel):
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
         "pk": "pk_%(table_name)s",
         }
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
