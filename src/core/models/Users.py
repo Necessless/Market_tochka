@@ -16,5 +16,5 @@ class User(Base):
     api_key: Mapped[str] = mapped_column(unique=True)
     instruments: Mapped[List["Instrument"]] = relationship(
         back_populates="owners", 
-        secondary="users_balances"
+        secondary="users_balance"
         )

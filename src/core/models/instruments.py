@@ -14,5 +14,5 @@ class Instrument(Base):
     
     owners: Mapped[List["User"]] = relationship(
         back_populates="instruments",
-        secondary="users_balances"
+        secondary="users_balance"
     )
