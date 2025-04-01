@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from core.models.Users import AuthRole
 import uuid 
-from typing import List
+from typing import List, Dict
 from core.models import Instrument
 
 class UserBase(BaseModel):
@@ -20,8 +20,7 @@ class NewUser(BaseModel):
 
 
 class Instrument_Public(BaseModel):
-    ticker: str = Field(min_length=3, pattern=r"^[A-Z]{2,10}$")
-    quantity: int = Field(ge=0)
+    balance: Dict[str, int] 
 
 
 class Balance(BaseModel):

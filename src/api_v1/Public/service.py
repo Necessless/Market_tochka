@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from typing import Sequence
 from core.models import User, Balance, Instrument
-from .schemas import UserBase, NewUser, UserRegister
+from .schemas import UserBase, NewUser, UserRegister, Instrument_Public
 from sqlalchemy.ext.asyncio import AsyncSession 
 from .auth import (
     create_token
@@ -33,7 +33,6 @@ async def create_user(
         session: AsyncSession,
         data: NewUser
 ) -> UserRegister:
-    
     to_encrypt = {"name": data.name}
     token = create_token(to_encrypt)
     user = User(name=data.name, role=data.role)
@@ -57,12 +56,16 @@ async def get_all_users(
 
 async def get_balance_for_user(
         session: AsyncSession,
-        token: str
-) -> Sequence[User]:
-    #ДОПИСАТЬ
-    user = await get_user(session, token)
-    query = select(User).options(selectinload(User.instruments))
-    result = await session.scalars(query)
+        name: str
+):
+    query = (
+        select(Balance, Instrument.ticker)
+        .join(Instrument, Instrument.ticker == Balance.instrument_ticker)
+        .filter(Balance.user_name == name)
+        )
+    result = await session.execute(query)
+    balances = result.all()
     if not result:
-        raise HTTPException(status_code=404, detail="Wallet for this user is not exists")
-    return result.all()
+        raise HTTPException(status_code=404, detail="User is not exists")
+    
+    return [{ticker:balance.quantity} for balance, ticker in balances]

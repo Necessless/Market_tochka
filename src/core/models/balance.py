@@ -11,8 +11,8 @@ class Balance(Base):
 
     id = None
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("Users.id", ondelete="CASCADE"),
+    user_name: Mapped[str] = mapped_column(
+        ForeignKey("Users.name", ondelete="CASCADE"),
         primary_key=True
     )
     instrument_ticker: Mapped[str] = mapped_column(

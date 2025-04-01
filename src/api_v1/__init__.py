@@ -18,8 +18,8 @@ async def test():
 
 @router.get("/balance")
 async def get_balance(
-    authorization: str = Depends(api_key_header),
+    user_name: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
-    wallet = await get_balance_for_user(session, authorization)
+    wallet = await get_balance_for_user(session, user_name)
     return wallet
