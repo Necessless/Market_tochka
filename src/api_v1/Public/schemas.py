@@ -19,9 +19,3 @@ class NewUser(BaseModel):
     role: AuthRole = Field(default=AuthRole.USER)
 
 
-class Instrument_Public(BaseModel):
-    balance: Dict[str, int] 
-
-
-class Balance(BaseModel):
-    instruments: List[Instrument_Public]

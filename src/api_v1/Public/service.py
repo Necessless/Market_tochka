@@ -1,9 +1,9 @@
 from fastapi import HTTPException, Header
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from typing import Sequence
+from typing import Sequence, Dict
 from core.models import User, Balance, Instrument
-from .schemas import UserBase, NewUser, UserRegister, Instrument_Public
+from .schemas import UserBase, NewUser, UserRegister
 from sqlalchemy.ext.asyncio import AsyncSession 
 from .auth import (
     create_token
@@ -57,7 +57,7 @@ async def get_all_users(
 async def get_balance_for_user(
         session: AsyncSession,
         name: str
-):
+) -> Dict[str, int]:
     query = (
         select(Balance, Instrument.ticker)
         .join(Instrument, Instrument.ticker == Balance.instrument_ticker)
@@ -68,4 +68,4 @@ async def get_balance_for_user(
     if not result:
         raise HTTPException(status_code=404, detail="User is not exists")
     
-    return [{ticker:balance.quantity} for balance, ticker in balances]
+    return {ticker: balance.quantity for balance, ticker in balances}

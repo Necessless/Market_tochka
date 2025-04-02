@@ -18,7 +18,7 @@ from .service import (
 router = APIRouter(tags=["admin"])
 
 
-@router.delete("/user/{user_id}", response_model=UserBase)
+@router.delete("/user/{user_id}", tags=["user"], response_model=UserBase)
 async def delete_user(
     user_id: UUID,
     authorization: str = Depends(api_key_header),
@@ -54,7 +54,7 @@ async def delete_instrument(
         return result
 
 
-@router.post("/balance/deposit", response_model=Ok)
+@router.post("/balance/deposit", tags=["balance"], response_model=Ok)
 async def balance_deposit(
     data: Deposit_Withdraw_Instrument_V1,
     authorization: str = Depends(api_key_header),
@@ -67,7 +67,7 @@ async def balance_deposit(
     raise HTTPException(status_code=405, detail="method not allowed")
 
 
-@router.post("/balance/withdraw", response_model=Ok)
+@router.post("/balance/withdraw", tags=["balance"], response_model=Ok)
 async def balance_withdraw(
     data: Deposit_Withdraw_Instrument_V1,
     authorization: str = Depends(api_key_header),
