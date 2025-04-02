@@ -7,13 +7,14 @@ from core.config import settings
 from .Public.auth import api_key_header
 from .Public.router import router as public_router
 from .admin.router import router as admin_router
+from .order.router import router as order_router
 from typing import Dict
 
 
 router = APIRouter(prefix=settings.api.v1.prefix)
 router.include_router(public_router, prefix=settings.api.public)
 router.include_router(admin_router, prefix=settings.api.admin)
-
+router.include_router(order_router, prefix=settings.api.order)
 
 @router.get("/")
 async def test():

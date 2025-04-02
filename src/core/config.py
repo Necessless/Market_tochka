@@ -16,6 +16,7 @@ class ApiPrefix(BaseModel):
     v1: ApiV1Prefix = ApiV1Prefix()
     public: str = "/public"
     admin: str = "/admin"
+    order: str ="/order"
 
 
 class HashConfig(BaseModel):
