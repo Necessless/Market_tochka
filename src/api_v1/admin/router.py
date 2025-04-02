@@ -6,20 +6,22 @@ from .dependencies import is_admin_user
 from api_v1.Public.auth import api_key_header
 from api_v1.Public.service import get_user
 from api_v1.Public.schemas import UserBase
-from .schemas import Instrument_Base, Ok
+from .schemas import Instrument_Base, Ok, Deposit_Instrument_V1
 from .service import (
     service_delete_user,
-    create_instrument, 
-    service_delete_instrument, 
-    )
+    create_instrument,
+    service_delete_instrument,
+    service_balance_deposit,
+)
 
 router = APIRouter(tags=["admin"])
+
 
 @router.delete("/user/{user_id}", response_model=UserBase)
 async def delete_user(
     user_id: UUID,
     authorization: str = Depends(api_key_header),
-    session: AsyncSession = Depends(db_helper.session_getter)
+    session: AsyncSession = Depends(db_helper.session_getter),
 ):
     curr_user = await get_user(session, authorization)
     if is_admin_user(curr_user):
@@ -31,7 +33,7 @@ async def delete_user(
 async def post_instrument(
     data: Instrument_Base,
     authorization: str = Depends(api_key_header),
-    session: AsyncSession = Depends(db_helper.session_getter)
+    session: AsyncSession = Depends(db_helper.session_getter),
 ):
     curr_user = await get_user(session, authorization)
     if is_admin_user(curr_user):
@@ -43,9 +45,22 @@ async def post_instrument(
 async def delete_instrument(
     ticker: str,
     authorization: str = Depends(api_key_header),
-    session: AsyncSession = Depends(db_helper.session_getter)
+    session: AsyncSession = Depends(db_helper.session_getter),
 ):
     curr_user = await get_user(session, authorization)
     if is_admin_user(curr_user):
-        instrument = await service_delete_instrument(ticker, session)
-        return instrument
+        result = await service_delete_instrument(ticker, session)
+        return result
+
+
+@router.post("/balance/deposit", response_model=Ok)
+async def balance_deposit(
+    data: Deposit_Instrument_V1,
+    authorization: str = Depends(api_key_header),
+    session: AsyncSession = Depends(db_helper.session_getter),
+) -> Ok:
+    curr_user = await get_user(session, authorization)
+    if is_admin_user(curr_user):
+        result = await service_balance_deposit(data, session)
+        return result
+

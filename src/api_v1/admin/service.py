@@ -1,11 +1,13 @@
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models.Users import User
 from api_v1.Public.schemas import UserBase
-from .schemas import Instrument_Base, Ok
-from core.models import Instrument
+from .schemas import Instrument_Base, Ok, Deposit_Instrument_V1
+from core.models import Instrument, Balance
+from .dependencies import get_user_by_id, get_instrument_by_ticker
 
 
 async def service_delete_user(
@@ -44,10 +46,23 @@ async def service_delete_instrument(
         ticker: str,
         session: AsyncSession
 ) -> Ok:
-    query = select(Instrument).filter(Instrument.ticker == ticker)
-    result = await session.scalar(query)
-    if result:
-        await session.delete(result)
-        await session.commit()
-        return Ok()
-    raise HTTPException(status_code=404, detail="instrument with this ticker is not found")
+    result = await get_instrument_by_ticker(ticker=ticker, session=session)
+    await session.delete(result)
+    await session.commit()
+    return Ok()
+
+
+async def service_balance_deposit(
+        data: Deposit_Instrument_V1,
+        session: AsyncSession
+) -> Ok:
+    user = await get_user_by_id(data.user_id, session)
+    instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
+    statement = (
+        insert(Balance)
+        .values(user_name=user.name, instrument_ticker=instrument.ticker, quantity=data.amount)
+        .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"quantity": Balance.quantity + data.amount})
+    )
+    await session.execute(statement)
+    await session.commit()
+    return Ok()

@@ -3,7 +3,7 @@ from fastapi import (APIRouter, Depends,)
 from sqlalchemy import select
 from core.database import db_helper
 from core.models import Instrument
-from .schemas import (UserBase, NewUser,UserRegister)
+from .schemas import (UserBase, NewUser, UserRegister)
 from api_v1.admin.schemas import Instrument_Base 
 from sqlalchemy.ext.asyncio import AsyncSession
 from .service import (get_all_users, create_user, get_user,)
