@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import db_helper
-from .Public.schemas import Balance_Public
 from .Public.service import get_balance_for_user
 from core.config import settings
 from .Public.auth import api_key_header
