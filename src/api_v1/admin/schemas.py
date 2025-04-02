@@ -7,7 +7,7 @@ class Instrument_Base(BaseModel):
     ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
 
 
-class Deposit_Instrument_V1(BaseModel):
+class Deposit_Withdraw_Instrument_V1(BaseModel):
     user_id: uuid.UUID
     ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
     amount: int = Field(gt=0)

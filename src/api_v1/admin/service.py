@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models.Users import User
 from api_v1.Public.schemas import UserBase
-from .schemas import Instrument_Base, Ok, Deposit_Instrument_V1
+from .schemas import Instrument_Base, Ok, Deposit_Withdraw_Instrument_V1
 from core.models import Instrument, Balance
 from .dependencies import get_user_by_id, get_instrument_by_ticker
 
@@ -53,7 +53,7 @@ async def service_delete_instrument(
 
 
 async def service_balance_deposit(
-        data: Deposit_Instrument_V1,
+        data: Deposit_Withdraw_Instrument_V1,
         session: AsyncSession
 ) -> Ok:
     user = await get_user_by_id(data.user_id, session)
@@ -64,5 +64,26 @@ async def service_balance_deposit(
         .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"quantity": Balance.quantity + data.amount})
     )
     await session.execute(statement)
+    await session.commit()
+    return Ok()
+
+
+async def service_balance_withdraw(
+        data: Deposit_Withdraw_Instrument_V1,
+        session: AsyncSession
+) -> Ok:
+    user = await get_user_by_id(data.user_id, session)
+    query = select(Balance).filter(Balance.user_name == user.name, Balance.instrument_ticker == data.ticker)
+    balance = await session.scalar(query)
+    if not balance:
+        raise HTTPException(status_code=404, detail="Instrument with this ticker is not found in user's wallet")
+    new_quantity = balance.quantity - data.amount
+    if new_quantity == 0:
+        await session.delete(balance)
+    elif new_quantity < 0:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+    else:
+        balance.quantity = new_quantity
+        session.add(balance)
     await session.commit()
     return Ok()

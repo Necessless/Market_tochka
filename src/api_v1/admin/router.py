@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import db_helper
 from uuid import UUID
@@ -6,12 +6,13 @@ from .dependencies import is_admin_user
 from api_v1.Public.auth import api_key_header
 from api_v1.Public.service import get_user
 from api_v1.Public.schemas import UserBase
-from .schemas import Instrument_Base, Ok, Deposit_Instrument_V1
+from .schemas import Instrument_Base, Ok, Deposit_Withdraw_Instrument_V1
 from .service import (
     service_delete_user,
     create_instrument,
     service_delete_instrument,
     service_balance_deposit,
+    service_balance_withdraw,
 )
 
 router = APIRouter(tags=["admin"])
@@ -55,7 +56,7 @@ async def delete_instrument(
 
 @router.post("/balance/deposit", response_model=Ok)
 async def balance_deposit(
-    data: Deposit_Instrument_V1,
+    data: Deposit_Withdraw_Instrument_V1,
     authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
 ) -> Ok:
@@ -63,4 +64,17 @@ async def balance_deposit(
     if is_admin_user(curr_user):
         result = await service_balance_deposit(data, session)
         return result
+    raise HTTPException(status_code=405, detail="method not allowed")
 
+
+@router.post("/balance/withdraw", response_model=Ok)
+async def balance_withdraw(
+    data: Deposit_Withdraw_Instrument_V1,
+    authorization: str = Depends(api_key_header),
+    session: AsyncSession = Depends(db_helper.session_getter),
+) -> Ok:
+    curr_user = await get_user(session, authorization)
+    if is_admin_user(curr_user):
+        result = await service_balance_withdraw(data, session)
+        return result
+    raise HTTPException(status_code=405, detail="method not allowed")
