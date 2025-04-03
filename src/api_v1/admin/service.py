@@ -4,27 +4,30 @@ from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.models.Users import User
-from api_v1.Public.schemas import UserBase
+from api_v1.Public.schemas import UserRegister
 from .schemas import Instrument_Base, Ok, Deposit_Withdraw_Instrument_V1
 from core.models import Instrument, Balance
 from .dependencies import get_user_by_id, get_instrument_by_ticker
+from api_v1.Public.auth import create_token
 
 
 async def service_delete_user(
         user_id: UUID,
         session: AsyncSession
-) -> UserBase:
+) -> UserRegister:
     statement = select(User).filter(User.id == user_id)
     user_to_delete = await session.scalar(statement)
     if not user_to_delete:
         raise HTTPException(status_code=404, detail="User with this id not found")
+    to_encrypt = {"name": user_to_delete.name}
+    token = create_token(to_encrypt)
     await session.delete(user_to_delete)
     await session.commit()
-    return UserBase(
+    return UserRegister(
         id=user_to_delete.id,
         role=user_to_delete.role,
         name=user_to_delete.name,
-        api_key=user_to_delete.api_key
+        api_key=token
     )
 
 

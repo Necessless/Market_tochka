@@ -1,27 +1,28 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 from core.models.orders import Direction, OrderStatus
 import uuid
-from sqlalchemy import DateTime
+import datetime
+from api_v1.admin.schemas import Ok
 
-
-class Market_Order_Body(BaseModel):
+class Order_Body(BaseModel):
     direction: Direction
     ticker: str
     qty: int = Field(ge=1)
-
-
-class Limit_Order_Body(Market_Order_Body):
-    price: int = Field(gt=0)
+    price: Optional[int] = Field(default=None, gt=0)
 
 
 class Market_Order_GET(BaseModel):
     id: uuid.UUID
     status: OrderStatus
     user_id: uuid.UUID
-    timestamp: DateTime
-    body: Market_Order_Body
+    timestamp: datetime.datetime
+    body: Order_Body
 
 
 class Limit_Order_GET(Market_Order_GET):
-    body: Limit_Order_Body
     filled: int
+
+
+class Create_Order_Response(Ok):
+    order_id: uuid.UUID

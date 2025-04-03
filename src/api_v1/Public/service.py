@@ -14,7 +14,6 @@ async def get_user(
         session: AsyncSession,
         name: str,
 ) -> UserBase:
-    
     query = select(User).where(User.name == name)
     user = await session.scalar(query)
     if not user:
