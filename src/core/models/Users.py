@@ -17,3 +17,4 @@ class User(Base):
         back_populates="owners", 
         secondary="users_balance"
         )
+    orders: Mapped[List["Order"]] = relationship(back_populates="user")

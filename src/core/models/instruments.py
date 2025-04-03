@@ -11,7 +11,7 @@ class Instrument(Base):
     
     ticker: Mapped[str] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
-    
+    transactions: Mapped[List["Transaction"]] = relationship(back_populates="instrument")
     owners: Mapped[List["User"]] = relationship(
         back_populates="instruments",
         secondary="users_balance"
