@@ -67,4 +67,4 @@ async def get_balance_for_user(
     if not result:
         raise HTTPException(status_code=404, detail="User is not exists")
     
-    return {ticker: balance.available for balance, ticker in balances}
+    return {ticker: balance.available + balance.reserved for balance, ticker in balances}

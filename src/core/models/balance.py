@@ -27,6 +27,10 @@ class Balance(Base):
     @property
     def available(self):
         return self._available
+    
+    @available.setter
+    def available(self, value):
+        self._available = value
 
     @property
     def reserved(self):

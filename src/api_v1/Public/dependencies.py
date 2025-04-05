@@ -12,16 +12,18 @@ async def get_balance_for_user_by_ticker(
         session: AsyncSession
 ) -> Balance_one_instrument:
     query = (
-        select(Balance.available, Balance.reserved)
+        select(Balance._available, Balance._reserved)
         .filter(Balance.user_name == user_name, Balance.instrument_ticker == ticker)
     )
     result = await session.execute(query)
-    if not result: 
+    balances = result.one_or_none()
+    if not balances: 
         return Balance_one_instrument(
             available=0,
             reserved=0
         )
+
     return Balance_one_instrument(
-        available=result[0],
-        reserved=result[1]
+        available=balances[0],
+        reserved=balances[1]
     )

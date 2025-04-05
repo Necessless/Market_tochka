@@ -63,8 +63,8 @@ async def service_balance_deposit(
     instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
     statement = (
         insert(Balance)
-        .values(user_name=user.name, instrument_ticker=instrument.ticker, available=data.amount)
-        .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"available": Balance.available + data.amount})
+        .values(user_name=user.name, instrument_ticker=instrument.ticker, _available=data.amount)
+        .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"available": Balance._available + data.amount})
     )
     await session.execute(statement)
     await session.commit()
