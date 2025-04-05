@@ -15,8 +15,26 @@ class Balance(Base):
         ForeignKey("Users.name", ondelete="CASCADE"),
         primary_key=True
     )
+
     instrument_ticker: Mapped[str] = mapped_column(
         ForeignKey("instruments.ticker", ondelete="CASCADE"), 
         primary_key=True
     )
-    quantity: Mapped[int]
+
+    _available: Mapped[int] = mapped_column("available", default=0)
+    _reserved: Mapped[int] = mapped_column("reserved", default=0)
+
+    @property
+    def available(self):
+        return self._available
+
+    @property
+    def reserved(self):
+        return self._reserved
+
+    @reserved.setter
+    def reserved(self, value):
+        if value > self._available:
+            raise ValueError("Not enough quantity on balance to reserve this amount")
+        self._available -= value
+        self._reserved += value

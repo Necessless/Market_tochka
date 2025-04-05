@@ -1,11 +1,12 @@
-from typing import List, Sequence
+from typing import List, Optional, Sequence
+from fastapi import HTTPException
 from sqlalchemy import select
-from core.models import Order
-from core.models.orders import Direction, OrderStatus
+from core.models import Order, Transaction
+from core.models.orders import Direction, OrderStatus, Order_Type
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def find_order_for_transaction(
+async def find_orders_for_market_transaction(
         order: Order,
         session: AsyncSession
 ) -> Sequence[Order]:
@@ -13,6 +14,7 @@ async def find_order_for_transaction(
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
             Order.direction == Direction.BUY,
+            Order.order_type == Order_Type.LIMIT,
             Order.user_id != order.user_id,
             Order.filled == 0,
             Order.price > 0,
@@ -23,6 +25,7 @@ async def find_order_for_transaction(
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
             Order.direction == Direction.SELL,
+            Order.order_type == Order_Type.LIMIT,
             Order.user_id != order.user_id,
             Order.price > 0,
             Order.filled == 0,
@@ -33,11 +36,65 @@ async def find_order_for_transaction(
     return orders.all()
     
 
-async def make_transaction(
+async def create_transaction(
+        instrument_ticker: str,
+        amount: int,
+        price: int,
+        session: AsyncSession
+) -> None:
+    transaction = Transaction(
+        instrument_ticker=instrument_ticker, 
+        amount=amount,
+        price=price,
+    )
+    if transaction:
+        session.add(transaction)
+    else:
+        await session.rollback()
+        raise HTTPException(status_code=400, detail="Cannot create transaction with this ticker, price and amount")
+
+
+async def make_market_transactions(
         order: Order,
         orders_for_transaction: List[Order],
         session: AsyncSession
-):
+) -> None:
     quantity = order.quantity
-    while quantity != 0:
-        #TO DO ДОПИСАТЬ АЛГОРИТМ ПРОДАЖИ\ПОКУПКИ ЧАСТИЧНОЙ ИЛИ ПОЛНОЙ
+    i = 0
+    while quantity != 0 and i != len(orders_for_transaction):
+        curr_order = orders_for_transaction[i]
+        if curr_order.quantity > quantity:
+            curr_order.quantity -= quantity
+            quantity = 0
+            curr_order.status = OrderStatus.PARTIALLY_EXECUTED
+            await create_transaction(
+                instrument_ticker=order.instrument_ticker,
+                amount=order.quantity,
+                price=curr_order.price,
+                session=session
+            )
+        elif curr_order.quantity == quantity:
+            curr_order.quantity = 0 
+            quantity = 0
+            await create_transaction(
+                instrument_ticker=order.instrument_ticker,
+                amount=order.quantity,
+                price=curr_order.price,
+                session=session
+            )
+        else:
+            quantity -= curr_order.quantity
+            await create_transaction(
+                instrument_ticker=order.instrument_ticker,
+                amount=curr_order.quantity,
+                price=curr_order.price,
+                session=session
+            )
+            curr_order.quantity = 0
+
+        if curr_order.quantity == 0:
+            curr_order.filled = 1
+            curr_order.status = OrderStatus.EXECUTED
+
+        i += 1
+        session.add(curr_order)

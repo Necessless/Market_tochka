@@ -63,8 +63,8 @@ async def service_balance_deposit(
     instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
     statement = (
         insert(Balance)
-        .values(user_name=user.name, instrument_ticker=instrument.ticker, quantity=data.amount)
-        .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"quantity": Balance.quantity + data.amount})
+        .values(user_name=user.name, instrument_ticker=instrument.ticker, available=data.amount)
+        .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"available": Balance.available + data.amount})
     )
     await session.execute(statement)
     await session.commit()
@@ -80,13 +80,13 @@ async def service_balance_withdraw(
     balance = await session.scalar(query)
     if not balance:
         raise HTTPException(status_code=404, detail="Instrument with this ticker is not found in user's wallet")
-    new_quantity = balance.quantity - data.amount
-    if new_quantity == 0:
+    new_quantity = balance.available - data.amount
+    if new_quantity == 0 and balance.reserved == 0:
         await session.delete(balance)
     elif new_quantity < 0:
         raise HTTPException(status_code=400, detail="Insufficient balance")
     else:
-        balance.quantity = new_quantity
+        balance.available = new_quantity
         session.add(balance)
     await session.commit()
     return Ok()

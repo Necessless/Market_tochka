@@ -4,6 +4,7 @@ import uuid
 from typing import List, Dict
 from core.models import Instrument
 
+
 class UserBase(BaseModel):
     id: uuid.UUID
     name: str 
@@ -19,3 +20,6 @@ class NewUser(BaseModel):
     role: AuthRole = Field(default=AuthRole.USER)
 
 
+class Balance_one_instrument(BaseModel):
+    available: int 
+    reserved: int

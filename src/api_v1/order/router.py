@@ -4,7 +4,9 @@ from api_v1.Public.auth import api_key_header
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import db_helper
 from api_v1.Public.service import get_user
-from .service import service_create_order
+from api_v1.Public.dependencies import get_balance_for_user_by_ticker
+from .service import service_create_market_order, service_create_limit_order
+
 
 router = APIRouter(tags=["order"])
 
@@ -16,5 +18,8 @@ async def create_order(
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     user = await get_user(session, user_name)
-    order = await service_create_order(data, user, session)
+    if not data.price:
+        order = await service_create_market_order(data, user, session)
+    else:
+        order = await service_create_limit_order(data, user, session)
     return order
