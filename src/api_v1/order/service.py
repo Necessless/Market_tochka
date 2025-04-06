@@ -1,4 +1,4 @@
-from .schemas import Order_Body
+from .schemas import Order_Body_POST
 from core.models import User, Order
 from core.models.orders import Order_Type, OrderStatus, Direction
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +9,7 @@ from api_v1.Public.dependencies import get_balance_for_user_by_ticker
 
 
 async def validate_balance(
-        data: Order_Body,
+        data: Order_Body_POST,
         user: User,
         session: AsyncSession
 ) -> None:
@@ -25,7 +25,7 @@ async def validate_balance(
     
 
 async def service_create_market_order(
-        data: Order_Body,   
+        data: Order_Body_POST,   
         user: User,
         session: AsyncSession
 ) -> Order:
@@ -40,8 +40,6 @@ async def service_create_market_order(
         order_type=Order_Type.MARKET
         )
     orders_for_transaction = await find_orders_for_market_transaction(order, session)
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAA")
-    print(orders_for_transaction)
     if not orders_for_transaction or (sum(order.quantity for order in orders_for_transaction) < order.quantity):
         order.status = OrderStatus.CANCELLED
         session.add(order)
@@ -55,7 +53,7 @@ async def service_create_market_order(
 
 
 async def service_create_limit_order(
-        data: Order_Body,   
+        data: Order_Body_POST,   
         user: User,
         session: AsyncSession
 ) -> Order:

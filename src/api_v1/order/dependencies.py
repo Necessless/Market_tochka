@@ -4,7 +4,7 @@ from sqlalchemy import select
 from core.models import Order, Transaction
 from core.models.orders import Direction, OrderStatus, Order_Type
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET
 
 async def create_transaction(
         instrument_ticker: str,
@@ -52,7 +52,7 @@ async def find_orders_for_market_transaction(
             ).order_by(Order.price.asc())
     orders = await session.scalars(query)
     return orders.all()
-    
+
 
 async def make_market_transactions(
         order: Order,
@@ -171,3 +171,39 @@ async def make_limit_transactions(
         session.add(curr_order)
         i+=1
     session.add(order)
+
+
+def serialize_orders(
+        orders: List[Order]
+) -> Sequence[Order]:
+    result = []
+    for order in orders:
+        if order.order_type == Order_Type.LIMIT:
+            temp = Limit_Order_GET(
+                id=order.id,
+                status=order.status,
+                user_id=order.user_id,
+                timestamp=order.timestamp,
+                body=Limit_Order_Body_GET(
+                    direction=order.direction,
+                    ticker=order.instrument_ticker,
+                    qty=order.quantity,
+                    price=order.price,
+                ),
+                filled=order.filled
+            )
+        else:
+            temp = Market_Order_GET(
+                id=order.id,
+                status=order.status,
+                user_id=order.user_id,
+                timestamp=order.timestamp,
+                body=Market_Order_Body_GET(
+                    direction=order.direction,
+                    ticker=order.instrument_ticker,
+                    qty=order.quantity
+                )
+            )
+        result.append(temp)
+    return result
+    
