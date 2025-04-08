@@ -10,20 +10,11 @@ async def get_balance_for_user_by_ticker(
         user_name: str,
         ticker: str,
         session: AsyncSession
-) -> Balance_one_instrument:
+) -> Balance | None:
     query = (
-        select(Balance._available, Balance._reserved)
+        select(Balance)
         .filter(Balance.user_name == user_name, Balance.instrument_ticker == ticker)
     )
     result = await session.execute(query)
-    balances = result.one_or_none()
-    if not balances: 
-        return Balance_one_instrument(
-            available=0,
-            reserved=0
-        )
-
-    return Balance_one_instrument(
-        available=balances[0],
-        reserved=balances[1]
-    )
+    balance = result.scalar()
+    return balance

@@ -1,10 +1,88 @@
-from typing import List, Optional, Sequence
+from typing import List, Sequence
 from fastapi import HTTPException
 from sqlalchemy import select
-from core.models import Order, Transaction
+from api_v1.Public.dependencies import get_balance_for_user_by_ticker
+from core.models import Order, Transaction, User, Balance
 from core.models.orders import Direction, OrderStatus, Order_Type
 from sqlalchemy.ext.asyncio import AsyncSession
-from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET
+from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET, Order_Body_POST
+
+
+async def validate_limit_balance(
+        data: Order_Body_POST,
+        user: User,
+        session: AsyncSession
+) -> None:
+    if data.direction == Direction.SELL:
+        balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker=data.ticker, session=session)
+        if balance.available < data.qty:
+            raise HTTPException(status_code=400, detail=f"Insufficient funds({data.ticker}) on balance to sell")
+    else:
+        balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker="RUB", session=session)
+        if balance.available < (data.qty * data.price):
+            raise HTTPException(status_code=400, detail="Insufficient funds(RUB) on balance to buy")
+    return 
+
+
+async def validate_and_return_market_balance(
+        data: Order_Body_POST,
+        user: User,
+        session: AsyncSession
+) -> Balance:
+    if data.direction == Direction.SELL:
+        balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker=data.ticker, session=session)
+        if balance is None or balance.available < data.qty:
+            raise HTTPException(status_code=400, detail=f"Insufficient funds({data.ticker}) on balance to sell")
+    else:
+        balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker=data.ticker, session=session)
+        print(balance)
+        if not balance:
+            balance = Balance(
+                user_name=user.name,
+                instrument_ticker=data.ticker,
+                available=0
+            )
+        print(balance)
+        session.add(balance)
+    return balance
+
+
+async def add_remove_market_balance(
+        balance_instr: Balance,
+        balance_rub: Balance,
+        direction: Direction,
+        amount: int,
+        price: int,
+        session: AsyncSession
+) -> None:
+    if direction == Direction.SELL:
+        balance_instr.available -= amount
+        balance_rub.available += (amount * price)
+    else:
+        balance_instr.available += amount
+        balance_rub.available -= (amount * price)
+    session.add(balance_instr)
+    session.add(balance_rub)
+    return 
+
+
+async def reserve_sum_on_balance(
+        user: User, 
+        order: Order,
+        session: AsyncSession
+) -> Balance:
+    if order.direction == Direction.SELL:
+        query = select(Balance).filter(Balance.instrument_ticker == order.instrument_ticker, Balance.user_name == user.name)
+        balance = await session.scalar(query)
+        balance.reserved += order.quantity
+        session.add(balance)
+    else:
+        query = select(Balance).filter(Balance.instrument_ticker == "RUB", Balance.user_name == user.name)
+        balance = await session.scalar(query)
+        balance.reserved += (order.quantity * order.price)
+        session.add(balance)
+    return balance
+
 
 async def create_transaction(
         instrument_ticker: str,
@@ -54,16 +132,41 @@ async def find_orders_for_market_transaction(
     return orders.all()
 
 
+async def check_balance_for_market_buy(
+        balance: int,
+        price: int,
+        amount: int, 
+        order: Order,
+        session: AsyncSession
+) -> None:
+    if balance < (amount * price):
+        order.status = OrderStatus.CANCELLED
+        session.add(order)
+        await session.commit()
+        raise HTTPException(status_code=400, detail="Insufficient funds(RUB) on balance to make buy transaction")
+    return 
+
+
 async def make_market_transactions(
         order: Order,
         orders_for_transaction: List[Order],
-        session: AsyncSession
-) -> None:
+        session: AsyncSession,
+        balance_instr: Balance,
+        user: User
+) -> None: 
     quantity = order.quantity
+    balance_rub = await get_balance_for_user_by_ticker(user_name=user.name, ticker="RUB", session=session)
+    if not balance_rub:
+        order.status = OrderStatus.CANCELLED
+        session.add(order)
+        await session.commit()
+        raise HTTPException(status_code=400, detail="No any rubbles on balance")
     i = 0
     while quantity != 0 and i != len(orders_for_transaction):
         curr_order = orders_for_transaction[i]
         if curr_order.quantity > quantity:
+            if order.direction == Direction.BUY:
+                await check_balance_for_market_buy(balance_rub.available, curr_order.price, quantity, order, session)
             curr_order.quantity -= quantity
             quantity = 0
             curr_order.status = OrderStatus.PARTIALLY_EXECUTED
@@ -73,7 +176,17 @@ async def make_market_transactions(
                 price=curr_order.price,
                 session=session
             )
+            await add_remove_market_balance(
+                balance_instr=balance_instr,
+                balance_rub=balance_rub,
+                direction=order.direction,
+                amount=order.quantity,
+                price=curr_order.price,
+                session=session
+            )
         elif curr_order.quantity == quantity:
+            if order.direction == Direction.BUY:
+                await check_balance_for_market_buy(balance_rub.available, curr_order.price, quantity, order, session)
             curr_order.quantity = 0 
             quantity = 0
             await create_transaction(
@@ -82,10 +195,28 @@ async def make_market_transactions(
                 price=curr_order.price,
                 session=session
             )
+            await add_remove_market_balance(
+                balance_instr=balance_instr,
+                balance_rub=balance_rub,
+                direction=order.direction,
+                amount=order.quantity,
+                price=curr_order.price,
+                session=session
+            )
         else:
+            if order.direction == Direction.BUY:
+                await check_balance_for_market_buy(balance_rub.available, curr_order.price, curr_order.price, order, session)
             quantity -= curr_order.quantity
             await create_transaction(
                 instrument_ticker=order.instrument_ticker,
+                amount=curr_order.quantity,
+                price=curr_order.price,
+                session=session
+            )
+            await add_remove_market_balance(
+                balance_instr=balance_instr,
+                balance_rub=balance_rub,
+                direction=order.direction,
                 amount=curr_order.quantity,
                 price=curr_order.price,
                 session=session
@@ -133,7 +264,9 @@ async def find_orders_for_limit_transaction(
 async def make_limit_transactions(
         order: Order,
         orders_for_transaction: List[Order],
-        session: AsyncSession
+        session: AsyncSession,
+        balance_instr: Balance,
+        user: User
 ) -> None:
     quantity = order.quantity
     i = 0 
@@ -143,7 +276,15 @@ async def make_limit_transactions(
             quantity -= curr_order.quantity
             await create_transaction(
                 instrument_ticker=order.instrument_ticker, 
-                amount = curr_order.quantity,
+                amount=curr_order.quantity,
+                price=curr_order.price,
+                session=session
+            )
+            await add_remove_balance(
+                balance_instr=balance_instr,
+                direction=order.direction,
+                user_name=user.name,
+                amount=curr_order.quantity,
                 price=curr_order.price,
                 session=session
             )
@@ -153,7 +294,15 @@ async def make_limit_transactions(
             curr_order.quantity -= quantity
             await create_transaction(
                 instrument_ticker=order.instrument_ticker, 
-                amount = quantity,
+                amount=quantity,
+                price=curr_order.price,
+                session=session
+            )
+            await add_remove_balance(
+                balance_instr=balance_instr,
+                direction=order.direction,
+                user_name=user.name,
+                amount=quantity,
                 price=curr_order.price,
                 session=session
             )
@@ -169,7 +318,7 @@ async def make_limit_transactions(
             order.status = OrderStatus.EXECUTED
             order.filled = 1
         session.add(curr_order)
-        i+=1
+        i += 1
     session.add(order)
 
 

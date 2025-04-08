@@ -1,13 +1,11 @@
 from sqlalchemy import  select
-from typing import Sequence
 from fastapi import APIRouter, Depends
-from .schemas import Order_Body_POST, Limit_Order_GET, Market_Order_GET
+from .schemas import Order_Body_POST
 from core.models import Order
 from api_v1.Public.auth import api_key_header
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import db_helper
 from api_v1.Public.service import get_user
-from api_v1.Public.dependencies import get_balance_for_user_by_ticker
 from .dependencies import serialize_orders
 from .service import service_create_market_order, service_create_limit_order
 
