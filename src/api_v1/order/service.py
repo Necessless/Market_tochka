@@ -21,6 +21,8 @@ async def service_create_market_order(
         session: AsyncSession
 ) -> Order:
     instrument = await get_instrument_by_ticker(data.ticker, session) #проверяем существование инструмента
+    if instrument.ticker == "RUB":
+        raise HTTPException(status_code=400, detail="You just cant buy or sell rubbles for rubbles")
     balance = await validate_and_return_market_balance(data, user, session)
     order = Order(
         user_id=user.id,
@@ -30,17 +32,20 @@ async def service_create_market_order(
         price=data.price, 
         order_type=Order_Type.MARKET
         )
-    orders_for_transaction = await find_orders_for_market_transaction(order, session)
-    if not orders_for_transaction or (sum(order.quantity for order in orders_for_transaction) < order.quantity):
+    try:
+        async with session.begin_nested():
+            orders_for_transaction = await find_orders_for_market_transaction(order, session)
+            if not orders_for_transaction or (sum(order.quantity for order in orders_for_transaction) < order.quantity):
+                raise HTTPException(status_code=422, detail="Not enough limit orders for this amount. Market order declined")
+            await make_market_transactions(order, orders_for_transaction, session, balance, user)
+            order.status = OrderStatus.EXECUTED
+            session.add(order)
+    except HTTPException as e:
         order.status = OrderStatus.CANCELLED
         session.add(order)
-        await session.commit()
-        raise HTTPException(status_code=422, detail="Not enough limit orders for this amount. Market order declined")
-    await make_market_transactions(order, orders_for_transaction, session, balance, user)
-    order.status = OrderStatus.EXECUTED
-    session.add(order)
-    await session.commit()
-    return order
+        raise e
+    finally:
+        return order
 
 
 async def service_create_limit_order(

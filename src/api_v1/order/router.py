@@ -1,6 +1,6 @@
 from sqlalchemy import  select
-from fastapi import APIRouter, Depends
-from .schemas import Order_Body_POST
+from fastapi import APIRouter, Depends, HTTPException
+from .schemas import Order_Body_POST, Create_Order_Response
 from core.models import Order
 from api_v1.Public.auth import api_key_header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,15 +25,20 @@ async def get_list_of_orders(
 
 
 
-@router.post("/")
+@router.post("/", response_model=Create_Order_Response)
 async def create_order(
     data: Order_Body_POST,
     user_name: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
-    user = await get_user(session, user_name)
-    if not data.price:
-        order = await service_create_market_order(data, user, session)
-    else:
-        order = await service_create_limit_order(data, user, session)
-    return order
+    async with session.begin():
+        user = await get_user(session, user_name)
+        if not data.price:
+            order = await service_create_market_order(data, user, session)
+        else:
+            order = await service_create_limit_order(data, user, session)
+    if not order:
+        raise HTTPException(status_code=422, detail="Cant create Order")
+    return Create_Order_Response(
+        order_id=order.id
+    )
