@@ -38,6 +38,9 @@ class Balance(Base):
 
     @reserved.setter
     def reserved(self, value):
+        self._reserved = value
+
+    def add_reserved(self, value):
         if value > self._available:
             raise ValueError("Not enough quantity on balance to reserve this amount")
         self._available -= value

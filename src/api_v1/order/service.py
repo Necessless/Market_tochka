@@ -4,7 +4,7 @@ from core.models.orders import Order_Type, OrderStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 from api_v1.admin.dependencies import get_instrument_by_ticker
 from .dependencies import (
-    validate_limit_balance, 
+    validate_and_return_limit_balance, 
     validate_and_return_market_balance,
     find_orders_for_market_transaction, 
     make_market_transactions, 
@@ -44,16 +44,15 @@ async def service_create_market_order(
         order.status = OrderStatus.CANCELLED
         session.add(order)
         raise e
-    finally:
-        return order
+    return order
 
 
 async def service_create_limit_order(
         data: Order_Body_POST,   
         user: User,
         session: AsyncSession
-) -> Order:
-    await validate_limit_balance(data, user, session)
+) -> Order: #TODO ДОДЕЛАТЬ ЧТОБЫ РАБОТАЛО КРЧ ВСЁ ЧИКИПУКИ
+    balance = await validate_and_return_limit_balance(data, user, session)
     instrument = await get_instrument_by_ticker(data.ticker, session)
     order = Order(
         user_id=user.id,
@@ -63,12 +62,11 @@ async def service_create_limit_order(
         price=data.price, 
         order_type=Order_Type.LIMIT
         )
-    balance = await reserve_sum_on_balance(user=user, order=order, session=session)
-    orders_for_transaction = await find_orders_for_limit_transaction(order, session)
-    if orders_for_transaction:
-        await make_limit_transactions(order, orders_for_transaction, session, balance, user)
-        await session.commit()
-    else:
-        session.add(order)
-        await session.commit()
+    async with session.begin_nested():
+        balance = await reserve_sum_on_balance(order=order, session=session, balance=balance)
+        orders_for_transaction = await find_orders_for_limit_transaction(order, session)
+        if orders_for_transaction:
+            await make_limit_transactions(order, orders_for_transaction, session, balance, user)
+        else:
+            session.add(order)
     return order

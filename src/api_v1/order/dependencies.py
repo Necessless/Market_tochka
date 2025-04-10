@@ -8,20 +8,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET, Order_Body_POST
 
 
-async def validate_limit_balance(
+async def validate_and_return_limit_balance(
         data: Order_Body_POST,
         user: User,
         session: AsyncSession
-) -> None:
+) -> Balance:
     if data.direction == Direction.SELL:
         balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker=data.ticker, session=session)
-        if balance.available < data.qty:
+        if balance is None or balance.available < data.qty:
             raise HTTPException(status_code=400, detail=f"Insufficient funds({data.ticker}) on balance to sell")
     else:
         balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker="RUB", session=session)
-        if balance.available < (data.qty * data.price):
+        if not balance:
+            balance = Balance(
+                user_name=user.name,
+                instrument_ticker="RUB",
+                available=0
+            )
+            session.add(balance)
+        elif balance.available < (data.qty * data.price):
             raise HTTPException(status_code=400, detail="Insufficient funds(RUB) on balance to buy")
-    return 
+    return balance
 
 
 async def validate_and_return_market_balance(
@@ -45,38 +52,44 @@ async def validate_and_return_market_balance(
     return balance
 
 
-async def add_remove_market_balance(
+async def add_remove_balance(
         balance_instr: Balance,
         balance_rub: Balance,
         direction: Direction,
+        order_type: Order_Type,
         amount: int,
         price: int,
         session: AsyncSession
 ) -> None:
     if direction == Direction.SELL:
-        balance_instr.available -= amount
+        if order_type == Order_Type.LIMIT:
+            balance_instr.reserved -= amount
+        else:
+            balance_instr.available -= amount
         balance_rub.available += (amount * price)
+
     else:
+        if order_type == Order_Type.LIMIT:
+            balance_rub.reserved -= (amount * price)
+        else:
+            balance_rub.available -= (amount * price)
         balance_instr.available += amount
-        balance_rub.available -= (amount * price)
     session.add_all([balance_instr, balance_rub])
     
 
 async def reserve_sum_on_balance(
-        user: User, 
         order: Order,
-        session: AsyncSession
+        session: AsyncSession,
+        balance: Balance
 ) -> Balance:
-    if order.direction == Direction.SELL:
-        query = select(Balance).filter(Balance.instrument_ticker == order.instrument_ticker, Balance.user_name == user.name)
-        balance = await session.scalar(query)
-        balance.reserved += order.quantity
-        session.add(balance)
-    else:
-        query = select(Balance).filter(Balance.instrument_ticker == "RUB", Balance.user_name == user.name)
-        balance = await session.scalar(query)
-        balance.reserved += (order.quantity * order.price)
-        session.add(balance)
+    try:
+        if order.direction == Direction.SELL:
+            balance.add_reserved(order.quantity)
+        else:
+            balance.add_reserved(order.quantity * order.price)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Not enough available funds on balance, check orders, rest of user's money is reserved")
+    session.add(balance)
     return balance
 
 
@@ -160,10 +173,11 @@ async def make_market_transactions(
             price=curr_order.price,
             session=session
         )
-        await add_remove_market_balance(
+        await add_remove_balance(
             balance_instr=balance_instr,
             balance_rub=balance_rub,
             direction=order.direction,
+            order_type=order.order_type,
             amount=amount_to_order,
             price=curr_order.price,
             session=session
@@ -215,53 +229,37 @@ async def make_limit_transactions(
         balance_instr: Balance,
         user: User
 ) -> None:
+    balance_rub = await get_balance_for_user_by_ticker(user_name=user.name, ticker="RUB", session=session)
+    if not balance_rub:
+        raise HTTPException(status_code=400, detail="No any rubbles on balance")
     quantity = order.quantity
     i = 0 
     while quantity > 0 and i != len(orders_for_transaction):
         curr_order = orders_for_transaction[i]
-        if curr_order.quantity < quantity:
-            quantity -= curr_order.quantity
-            await create_transaction(
-                instrument_ticker=order.instrument_ticker, 
-                amount=curr_order.quantity,
-                price=curr_order.price,
-                session=session
-            )
-            await add_remove_balance(
-                balance_instr=balance_instr,
-                direction=order.direction,
-                user_name=user.name,
-                amount=curr_order.quantity,
-                price=curr_order.price,
-                session=session
-            )
-            order.status = OrderStatus.PARTIALLY_EXECUTED
-            curr_order.quantity = 0
-        elif curr_order.quantity >= quantity:
-            curr_order.quantity -= quantity
-            await create_transaction(
-                instrument_ticker=order.instrument_ticker, 
-                amount=quantity,
-                price=curr_order.price,
-                session=session
-            )
-            await add_remove_balance(
-                balance_instr=balance_instr,
-                direction=order.direction,
-                user_name=user.name,
-                amount=quantity,
-                price=curr_order.price,
-                session=session
-            )
-            quantity = 0 
-            order.status = OrderStatus.EXECUTED
-            order.filled = 1
-
+        amount_to_transact = min(curr_order.quantity, quantity)
+        await create_transaction(
+            instrument_ticker=order.instrument_ticker, 
+            amount=amount_to_transact,
+            price=curr_order.price,
+            session=session
+        )
+        await add_remove_balance(
+            balance_instr=balance_instr,
+            balance_rub=balance_rub,
+            direction=order.direction,
+            order_type=order.order_type,
+            amount=amount_to_transact,
+            price=curr_order.price,
+            session=session
+        )
+        quantity -= amount_to_transact
+        curr_order.quantity -= amount_to_transact
+        order.status = OrderStatus.PARTIALLY_EXECUTED
+        curr_order.status = OrderStatus.PARTIALLY_EXECUTED
         if curr_order.quantity == 0:
             curr_order.status = OrderStatus.EXECUTED
             curr_order.filled = 1
-        elif quantity == 0 and curr_order.quantity > 0:
-            curr_order.status = OrderStatus.PARTIALLY_EXECUTED
+        if quantity == 0:
             order.status = OrderStatus.EXECUTED
             order.filled = 1
         session.add(curr_order)
