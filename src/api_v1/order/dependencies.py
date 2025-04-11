@@ -1,9 +1,12 @@
 from typing import List, Sequence
 from fastapi import HTTPException
 from sqlalchemy import select
+import uuid
 from api_v1.Public.dependencies import get_balance_for_user_by_ticker
+from api_v1.Public.service import get_user
 from core.models import Order, Transaction, User, Balance
 from core.models.orders import Direction, OrderStatus, Order_Type
+from core.models.Users import AuthRole
 from sqlalchemy.ext.asyncio import AsyncSession
 from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET, Order_Body_POST
 
@@ -305,3 +308,14 @@ def serialize_orders(
         result.append(temp)
     return result
     
+
+def validate_user_for_order_cancel(
+        user: User,
+        order: Order
+) -> None:
+    if order.user_id != user.id and user.role != AuthRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only owner or admin can cancel order")
+    if order.status in [OrderStatus.CANCELLED, OrderStatus.EXECUTED]:
+        raise HTTPException(status_code=400, detail=f"Order is already {order.status.value}")
+    if order.order_type == Order_Type.MARKET:
+        raise HTTPException(status_code=400, detail="Market order cant be cancelled")

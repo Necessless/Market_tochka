@@ -1,7 +1,9 @@
 from sqlalchemy import select
-from .schemas import Order_Body_POST
+from .schemas import Order_Body_POST, Ok
 from core.models import User, Order
+from core.models.Users import AuthRole
 import uuid
+from api_v1.Public.service import get_user
 from core.models.orders import Order_Type, OrderStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 from api_v1.admin.dependencies import get_instrument_by_ticker
@@ -13,7 +15,7 @@ from .dependencies import (
     find_orders_for_limit_transaction,
     make_limit_transactions,
     reserve_sum_on_balance,
-    serialize_orders,
+    validate_user_for_order_cancel,
 )
 from fastapi import HTTPException
 
@@ -76,11 +78,23 @@ async def service_create_limit_order(
 async def service_retrieve_order(
         order_id: uuid.UUID,
         session: AsyncSession
-):
+) -> Order:
     query = select(Order).filter(Order.id == order_id)
     result = await session.execute(query)
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="order with this id not found")
-    serialized_order = serialize_orders([order])[0]
-    return serialized_order
+    return order
+
+
+async def service_cancel_order(
+    user_name: str,
+    order_id: uuid.UUID,
+    session: AsyncSession
+) -> Ok:
+    user = await get_user(session=session, name=user_name)
+    order = await service_retrieve_order(order_id=order_id, session=session)
+    validate_user_for_order_cancel(user, order)
+    order.status = OrderStatus.CANCELLED
+    session.add(order)
+    return Ok()

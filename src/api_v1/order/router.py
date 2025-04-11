@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from fastapi import APIRouter, Depends, HTTPException
-from .schemas import Order_Body_POST, Create_Order_Response
+from .schemas import Order_Body_POST, Create_Order_Response, Ok
 from core.models import Order
 from api_v1.Public.auth import api_key_header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,7 @@ from .service import (
     service_create_market_order,
     service_create_limit_order,
     service_retrieve_order,
+    service_cancel_order
 )
 
 
@@ -55,4 +56,17 @@ async def retrieve_order(
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     order = await service_retrieve_order(order_id=order_id, session=session)
-    return order
+    serialized_order = serialize_orders([order])[0]
+    return serialized_order
+
+
+@router.delete("/{order_id}", response_model=Ok)
+async def cancel_order(
+    order_id: uuid.UUID,
+    user_name: str = Depends(api_key_header),
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    result = await service_cancel_order(user_name=user_name, order_id=order_id, session=session)
+    await session.commit()
+    return result
+    
