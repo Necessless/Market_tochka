@@ -13,6 +13,8 @@ async def validate_and_return_limit_balance(
         user: User,
         session: AsyncSession
 ) -> Balance:
+    if data.ticker == "RUB":
+        raise HTTPException(status_code=400, detail="Cant sell or buy Rubbles")
     if data.direction == Direction.SELL:
         balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker=data.ticker, session=session)
         if balance is None or balance.available < data.qty:
@@ -36,6 +38,8 @@ async def validate_and_return_market_balance(
         user: User,
         session: AsyncSession
 ) -> Balance:
+    if data.ticker == "RUB":
+        raise HTTPException(status_code=400, detail="Cant sell or buy Rubbles")
     if data.direction == Direction.SELL:
         balance = await get_balance_for_user_by_ticker(user_name=user.name, ticker=data.ticker, session=session)
         if balance is None or balance.available < data.qty:

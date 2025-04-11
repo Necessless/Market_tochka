@@ -1,5 +1,7 @@
+from sqlalchemy import select
 from .schemas import Order_Body_POST
 from core.models import User, Order
+import uuid
 from core.models.orders import Order_Type, OrderStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 from api_v1.admin.dependencies import get_instrument_by_ticker
@@ -10,7 +12,8 @@ from .dependencies import (
     make_market_transactions, 
     find_orders_for_limit_transaction,
     make_limit_transactions,
-    reserve_sum_on_balance
+    reserve_sum_on_balance,
+    serialize_orders,
 )
 from fastapi import HTTPException
 
@@ -21,9 +24,7 @@ async def service_create_market_order(
         session: AsyncSession
 ) -> Order:
     instrument = await get_instrument_by_ticker(data.ticker, session) #проверяем существование инструмента
-    if instrument.ticker == "RUB":
-        raise HTTPException(status_code=400, detail="You just cant buy or sell rubbles for rubbles")
-    balance = await validate_and_return_market_balance(data, user, session)
+    balance = await validate_and_return_market_balance(data, user, session) #получаем или создаем баланс 
     order = Order(
         user_id=user.id,
         direction=data.direction, 
@@ -51,7 +52,7 @@ async def service_create_limit_order(
         data: Order_Body_POST,   
         user: User,
         session: AsyncSession
-) -> Order: #TODO ДОДЕЛАТЬ ЧТОБЫ РАБОТАЛО КРЧ ВСЁ ЧИКИПУКИ
+) -> Order:
     balance = await validate_and_return_limit_balance(data, user, session)
     instrument = await get_instrument_by_ticker(data.ticker, session)
     order = Order(
@@ -70,3 +71,16 @@ async def service_create_limit_order(
         else:
             session.add(order)
     return order
+
+
+async def service_retrieve_order(
+        order_id: uuid.UUID,
+        session: AsyncSession
+):
+    query = select(Order).filter(Order.id == order_id)
+    result = await session.execute(query)
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="order with this id not found")
+    serialized_order = serialize_orders([order])[0]
+    return serialized_order
