@@ -1,8 +1,6 @@
 from pydantic import BaseModel, Field
 from core.models.Users import AuthRole
 import uuid 
-from typing import List, Dict
-from core.models import Instrument
 
 
 class UserBase(BaseModel):

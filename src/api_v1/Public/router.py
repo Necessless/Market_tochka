@@ -1,8 +1,9 @@
-from typing import Sequence
+from typing import List, Sequence
 from fastapi import (APIRouter, Depends,)
+from fastapi.params import Query
 from sqlalchemy import select
 from core.database import db_helper
-from core.models import Instrument
+from core.models import Instrument, Transaction
 from .schemas import (UserBase, NewUser, UserRegister)
 from api_v1.admin.schemas import Instrument_Base 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,3 +51,15 @@ async def get_all_instruments(
     query = select(Instrument).order_by(Instrument.ticker)
     result = await session.scalars(query)
     return result.all()
+
+
+@router.get("/transactions/{ticker}")
+async def get_transactions_history(
+    ticker: str,
+    limit: int = Query(default=10),
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    query = select(Transaction).filter(Transaction.instrument_ticker == ticker).limit(limit)
+    result = await session.scalars(query)
+    return result.all()
+    
