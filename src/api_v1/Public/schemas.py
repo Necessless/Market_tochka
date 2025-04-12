@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from core.models.Users import AuthRole
 import uuid 
+from typing import List
 
 
 class UserBase(BaseModel):
@@ -21,3 +22,12 @@ class NewUser(BaseModel):
 class Balance_one_instrument(BaseModel):
     available: int 
     reserved: int
+
+
+class L2OrderBook(BaseModel):
+    price: int = Field(ge=0)
+    qty: int = Field(ge=0)
+
+class OrderBook(BaseModel):
+    bid_levels: List[L2OrderBook]
+    ask_levels: List[L2OrderBook]

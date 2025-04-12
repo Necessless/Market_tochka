@@ -1,9 +1,10 @@
 from fastapi import HTTPException
-from sqlalchemy import select, text, func, outerjoin
+from sqlalchemy import select, func
 from sqlalchemy.orm import aliased
 from typing import Sequence, Dict
-from core.models import User, Balance, Instrument
-from .schemas import UserBase, NewUser, UserRegister
+from core.models import User, Balance, Instrument, Order
+from core.models.orders import Order_Type, OrderStatus, Direction
+from .schemas import UserBase, NewUser, UserRegister, OrderBook, L2OrderBook
 from sqlalchemy.ext.asyncio import AsyncSession 
 from .auth import (
     create_token
@@ -81,3 +82,47 @@ async def get_balance_for_user(
     if not result:
         raise HTTPException(status_code=404, detail="User is not exists")
     return {ticker: available + reserved for ticker, available, reserved in balances}
+
+
+async def service_get_orderbook(
+        ticker: str,
+        limit: int,
+        session: AsyncSession
+) -> OrderBook:
+    query_ask = (
+        select(func.sum(Order.quantity), Order.price)
+        .filter(
+            Order.instrument_ticker == ticker,
+            Order.direction == Direction.BUY,
+            Order.order_type == Order_Type.LIMIT,
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.desc())
+        .limit(limit)
+    )
+    query_bid = (
+        select(func.sum(Order.quantity), Order.price)
+        .filter(
+            Order.instrument_ticker == ticker,
+            Order.direction == Direction.SELL,
+            Order.order_type == Order_Type.LIMIT,
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.asc())
+        .limit(limit)
+    )
+    res_ask = await session.execute(query_ask)
+    res_bid = await session.execute(query_bid)
+
+    res_ask = res_ask.all()
+    res_bid = res_bid.all()
+    
+    res_ask = [L2OrderBook(price=price, qty=qty) for qty, price in res_ask]
+    res_bid = [L2OrderBook(price=price, qty=qty) for qty, price in res_bid]
+
+    return OrderBook(
+        bid_levels=res_bid,
+        ask_levels=res_ask
+    )

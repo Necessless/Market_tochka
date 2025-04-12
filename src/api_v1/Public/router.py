@@ -4,10 +4,10 @@ from fastapi.params import Query
 from sqlalchemy import select
 from core.database import db_helper
 from core.models import Instrument, Transaction
-from .schemas import (UserBase, NewUser, UserRegister)
+from .schemas import (UserBase, NewUser, UserRegister, OrderBook)
 from api_v1.admin.schemas import Instrument_Base 
 from sqlalchemy.ext.asyncio import AsyncSession
-from .service import (get_all_users, create_user, get_user,)
+from .service import (get_all_users, create_user, get_user, service_get_orderbook)
 from .auth import api_key_header
 
 
@@ -62,4 +62,14 @@ async def get_transactions_history(
     query = select(Transaction).filter(Transaction.instrument_ticker == ticker).limit(limit)
     result = await session.scalars(query)
     return result.all()
+    
+
+@router.get("/orderbook/{ticker}", response_model=OrderBook)
+async def get_orderbook(
+    ticker: str, 
+    limit: int = Query(default=10),
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    orderbook = await service_get_orderbook(ticker=ticker, limit=limit, session=session)
+    return orderbook
     
