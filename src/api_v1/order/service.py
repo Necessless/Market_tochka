@@ -1,9 +1,9 @@
 from sqlalchemy import select
 from .schemas import Order_Body_POST, Ok
 from core.models import User, Order
-from core.models.Users import AuthRole
 import uuid
 from api_v1.Public.service import get_user
+from api_v1.Public.dependencies import get_balance_for_user_by_ticker
 from core.models.orders import Order_Type, OrderStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 from api_v1.admin.dependencies import get_instrument_by_ticker
@@ -16,6 +16,7 @@ from .dependencies import (
     make_limit_transactions,
     reserve_sum_on_balance,
     validate_user_for_order_cancel,
+    add_remove_balance,
 )
 from fastapi import HTTPException
 
@@ -95,6 +96,16 @@ async def service_cancel_order(
     user = await get_user(session=session, name=user_name)
     order = await service_retrieve_order(order_id=order_id, session=session)
     validate_user_for_order_cancel(user, order)
+    balance_instr = await get_balance_for_user_by_ticker(user_name=user_name, ticker=order.instrument_ticker, session=session)
+    balance_rub = await get_balance_for_user_by_ticker(user_name=user_name, ticker="RUB", session=session)
     order.status = OrderStatus.CANCELLED
     session.add(order)
+    await add_remove_balance(
+        balance_instr=balance_instr,
+        balance_rub=balance_rub,
+        order=order,
+        amount=order.quantity,
+        price=order.price,
+        session=session
+    )
     return Ok()

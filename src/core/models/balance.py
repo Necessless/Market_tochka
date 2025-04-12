@@ -45,3 +45,9 @@ class Balance(Base):
             raise ValueError("Not enough quantity on balance to reserve this amount")
         self._available -= value
         self._reserved += value
+
+    def remove_reserved(self, value):
+        if value > self._reserved:
+            raise ValueError("Not enough quantity reserved on balance to unreserve this amount")
+        self._available += value
+        self._reserved -= value

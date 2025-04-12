@@ -62,19 +62,26 @@ async def validate_and_return_market_balance(
 async def add_remove_balance(
         balance_instr: Balance,
         balance_rub: Balance,
-        direction: Direction,
-        order_type: Order_Type,
+        order: Order,
         amount: int,
         price: int,
         session: AsyncSession
 ) -> None:
-    if direction == Direction.SELL:
+    direction = order.direction,
+    order_type = order.order_type
+    if order.status == OrderStatus.CANCELLED: #если пользователь отменил ордер, и требуется вернуть средства
+        if direction == Direction.SELL:
+            balance_instr.remove_reserved(amount)
+        else:
+            balance_rub.remove_reserved(amount*price)
+        session.add_all([balance_instr, balance_rub])
+        return 
+    if direction == Direction.SELL: 
         if order_type == Order_Type.LIMIT:
             balance_instr.reserved -= amount
         else:
             balance_instr.available -= amount
         balance_rub.available += (amount * price)
-
     else:
         if order_type == Order_Type.LIMIT:
             balance_rub.reserved -= (amount * price)
@@ -183,8 +190,7 @@ async def make_market_transactions(
         await add_remove_balance(
             balance_instr=balance_instr,
             balance_rub=balance_rub,
-            direction=order.direction,
-            order_type=order.order_type,
+            order=order,
             amount=amount_to_order,
             price=curr_order.price,
             session=session
@@ -253,8 +259,7 @@ async def make_limit_transactions(
         await add_remove_balance(
             balance_instr=balance_instr,
             balance_rub=balance_rub,
-            direction=order.direction,
-            order_type=order.order_type,
+            order=order,
             amount=amount_to_transact,
             price=curr_order.price,
             session=session
@@ -319,3 +324,4 @@ def validate_user_for_order_cancel(
         raise HTTPException(status_code=400, detail=f"Order is already {order.status.value}")
     if order.order_type == Order_Type.MARKET:
         raise HTTPException(status_code=400, detail="Market order cant be cancelled")
+

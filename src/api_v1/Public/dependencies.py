@@ -1,9 +1,7 @@
-from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from core.models import Balance
-from .schemas import Balance_one_instrument
+
 
 
 async def get_balance_for_user_by_ticker(
@@ -16,5 +14,5 @@ async def get_balance_for_user_by_ticker(
         .filter(Balance.user_name == user_name, Balance.instrument_ticker == ticker)
     )
     result = await session.execute(query)
-    balance = result.scalar()
+    balance = result.scalar_one_or_none()
     return balance
