@@ -1,6 +1,6 @@
-from fastapi import HTTPException, Header
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from fastapi import HTTPException
+from sqlalchemy import select, text, func, outerjoin
+from sqlalchemy.orm import aliased
 from typing import Sequence, Dict
 from core.models import User, Balance, Instrument
 from .schemas import UserBase, NewUser, UserRegister
@@ -57,14 +57,27 @@ async def get_balance_for_user(
         session: AsyncSession,
         name: str
 ) -> Dict[str, int]:
-    query = (
-        select(Balance, Instrument.ticker)
-        .join(Instrument, Instrument.ticker == Balance.instrument_ticker)
-        .filter(Balance.user_name == name)
-        )
-    result = await session.execute(query)
+    # query = text("""WITH balance AS (SELECT available, reserved, instrument_ticker
+    #     FROM public.users_balance
+    #     WHERE user_name = :name
+    #     ),
+    #     instrument AS (SELECT ticker FROM public.instruments)
+    #     SELECT instrument.ticker, COALESCE(balance.available,0), COALESCE(balance.reserved,0)
+    #     FROM balance
+    #     RIGHT JOIN instrument
+    #     ON instrument.ticker = balance.instrument_ticker;
+    # """) raw sql запрос на всякий случай
+    statement_balance = select(Balance).filter(Balance.user_name == name)
+    statement_instrument = select(Instrument)
+    statement_balance = statement_balance.cte('balance')
+    statement_instrument = statement_instrument.cte('instrument')
+    statement = (
+        select(statement_instrument.c.ticker, func.coalesce(statement_balance.c.available,0), func.coalesce(statement_balance.c.reserved,0))
+        .select_from(statement_instrument)
+        .outerjoin(statement_balance, statement_instrument.c.ticker == statement_balance.c.instrument_ticker)
+    )
+    result = await session.execute(statement)
     balances = result.all()
     if not result:
         raise HTTPException(status_code=404, detail="User is not exists")
-    
-    return {ticker: balance.available + balance.reserved for balance, ticker in balances}
+    return {ticker: available + reserved for ticker, available, reserved in balances}
