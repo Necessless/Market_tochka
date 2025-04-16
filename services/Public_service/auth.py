@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Header
 from fastapi.security import OAuth2PasswordBearer
 import jwt
-from core.config import settings
+from shared.config import settings
 from passlib.context import CryptContext
 
 SECRET_KEY = settings.hash.secret

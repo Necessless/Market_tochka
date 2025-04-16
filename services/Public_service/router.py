@@ -2,7 +2,7 @@ from typing import List, Sequence
 from fastapi import (APIRouter, Depends,)
 from fastapi.params import Query
 from sqlalchemy import select
-from core.database import db_helper
+from shared.database import db_helper
 from core.models import Instrument, Transaction
 from .schemas import (UserBase, NewUser, UserRegister, OrderBook)
 from api_v1.admin.schemas import Instrument_Base 

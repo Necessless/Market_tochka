@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.database import db_helper
+from shared.database import db_helper
 from uuid import UUID
 from .dependencies import is_admin_user
 from api_v1.Public.auth import api_key_header

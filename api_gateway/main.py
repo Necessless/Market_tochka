@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import uvicorn
-from core.config import settings
+from shared.config import settings
 from api_v1 import router as api_router
-from core.database import db_helper
+from shared.database import db_helper
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
