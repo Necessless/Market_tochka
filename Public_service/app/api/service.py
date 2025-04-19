@@ -1,14 +1,14 @@
 from fastapi import HTTPException
 from sqlalchemy import select, func
-from sqlalchemy.orm import aliased
 from typing import Sequence, Dict
 from core.models import User, Balance, Instrument, Order
 from core.models.orders import Order_Type, OrderStatus, Direction
-from .schemas import UserBase, NewUser, UserRegister, OrderBook, L2OrderBook
+from .schemas import NewUser, OrderBook, L2OrderBook
 from sqlalchemy.ext.asyncio import AsyncSession 
-from .auth import (
+from core.auth import (
     create_token
 )
+from core.schemas.Users_DTO import UserBase, UserRegister
 
 
 async def get_user(

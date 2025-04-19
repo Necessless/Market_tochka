@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from shared.database import db_helper
+from core.database import db_helper
 from uuid import UUID
 from .dependencies import is_admin_user
-from api_v1.Public.auth import api_key_header
-from api_v1.Public.service import get_user
-from api_v1.Public.schemas import UserRegister
-from .schemas import Instrument_Base, Ok, Deposit_Withdraw_Instrument_V1
+from core.auth import api_key_header
+from .dependencies import get_user
+from core.schemas.Users_DTO import UserRegister
+from core.schemas.Instruments_DTO import Instrument_Base
+from core.schemas.Responses import Ok
+from .schemas import Deposit_Withdraw_Instrument_V1
 from .service import (
     service_delete_user,
     create_instrument,
@@ -21,10 +23,10 @@ router = APIRouter(tags=["admin"])
 @router.delete("/user/{user_id}", tags=["user"], response_model=UserRegister)
 async def delete_user(
     user_id: UUID,
-    authorization: str = Depends(api_key_header),
+    user_name: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    curr_user = await get_user(session, authorization)
+    curr_user = await get_user(session, user_name)
     if is_admin_user(curr_user):
         res = await service_delete_user(user_id, session)
         return res

@@ -1,14 +1,15 @@
-from typing import List, Sequence
+from typing import Sequence
 from fastapi import (APIRouter, Depends,)
 from fastapi.params import Query
 from sqlalchemy import select
-from shared.database import db_helper
+from core.database import db_helper
 from core.models import Instrument, Transaction
-from .schemas import (UserBase, NewUser, UserRegister, OrderBook)
-from api_v1.admin.schemas import Instrument_Base 
+from .schemas import (NewUser, OrderBook,)
+from core.schemas.Instruments_DTO import Instrument_Base 
+from core.schemas.Users_DTO import UserBase, UserRegister
 from sqlalchemy.ext.asyncio import AsyncSession
 from .service import (get_all_users, create_user, get_user, service_get_orderbook)
-from .auth import api_key_header
+from core.auth import api_key_header
 
 
 router = APIRouter(tags=["public"])

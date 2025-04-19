@@ -1,6 +1,6 @@
 from sqlalchemy import select
 import uuid
-from api_v1.Public.schemas import UserBase
+from core.schemas.Users_DTO import UserBase
 from fastapi import HTTPException, Header
 from core.models.Users import AuthRole, User
 from core.models import Instrument
@@ -34,3 +34,20 @@ async def get_instrument_by_ticker(
         raise HTTPException(status_code=404, detail="Cant find instrument with this ticker")
     return instrument
 
+
+async def get_user(
+        session: AsyncSession,
+        name: str,
+) -> UserBase:
+    query = select(User).where(User.name == name)
+    user = await session.scalar(query)
+    if not user:
+        raise HTTPException(
+            status_code=401, 
+            detail="Wrong Authentication token"
+            )
+    return UserBase(
+        id=user.id,
+        name=user.name,
+        role=user.role,
+    )

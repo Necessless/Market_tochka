@@ -1,8 +1,6 @@
-from typing import List
 from .base import Base
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey, UniqueConstraint
-import uuid
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey
 
 
 

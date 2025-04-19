@@ -1,14 +1,36 @@
 from typing import List, Sequence
 from fastapi import HTTPException
 from sqlalchemy import select
-import uuid
-from api_v1.Public.dependencies import get_balance_for_user_by_ticker
-from api_v1.Public.service import get_user
-from core.models import Order, Transaction, User, Balance
+from core.schemas.Users_DTO import UserBase
+from core.models import Order, Transaction, User, Balance, Instrument
 from core.models.orders import Direction, OrderStatus, Order_Type
 from core.models.Users import AuthRole
 from sqlalchemy.ext.asyncio import AsyncSession
 from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET, Order_Body_POST
+
+async def get_balance_for_user_by_ticker(
+        user_name: str,
+        ticker: str,
+        session: AsyncSession
+) -> Balance | None:
+    query = (
+        select(Balance)
+        .filter(Balance.user_name == user_name, Balance.instrument_ticker == ticker)
+    )
+    result = await session.execute(query)
+    balance = result.scalar_one_or_none()
+    return balance
+
+
+async def get_instrument_by_ticker(
+    ticker: str,
+    session: AsyncSession
+) -> Instrument:
+    query = select(Instrument).filter(Instrument.ticker == ticker)
+    instrument = await session.scalar(query)
+    if not instrument:
+        raise HTTPException(status_code=404, detail="Cant find instrument with this ticker")
+    return instrument
 
 
 async def validate_and_return_limit_balance(
@@ -325,3 +347,20 @@ def validate_user_for_order_cancel(
     if order.order_type == Order_Type.MARKET:
         raise HTTPException(status_code=400, detail="Market order cant be cancelled")
 
+
+async def get_user(
+        session: AsyncSession,
+        name: str,
+) -> UserBase:
+    query = select(User).where(User.name == name)
+    user = await session.scalar(query)
+    if not user:
+        raise HTTPException(
+            status_code=401, 
+            detail="Wrong Authentication token"
+            )
+    return UserBase(
+        id=user.id,
+        name=user.name,
+        role=user.role,
+    )

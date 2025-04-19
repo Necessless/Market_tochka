@@ -3,12 +3,14 @@ from sqlalchemy.dialects.postgresql import insert
 from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models.Users import User
-from api_v1.Public.schemas import UserRegister
-from .schemas import Instrument_Base, Ok, Deposit_Withdraw_Instrument_V1
+from core.models import User
+from core.schemas.Users_DTO import UserRegister
+from core.schemas.Responses import Ok
+from core.schemas.Instruments_DTO import Instrument_Base
+from .schemas import Deposit_Withdraw_Instrument_V1
 from core.models import Instrument, Balance
 from .dependencies import get_user_by_id, get_instrument_by_ticker
-from api_v1.Public.auth import create_token
+from core.auth import create_token
 
 
 async def service_delete_user(

@@ -1,18 +1,9 @@
 [tool.poetry]
-name = "shared"
+name = "admin_service"
 version = "0.1.0"
 description = ""
 authors = ["Александр <av.sanya@yandex.ru>"]
-packages = [
-    { include = "core", from = "." }
-]
 
-[tool.setuptools]
-py-modules = []
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -25,9 +16,8 @@ asyncpg = "^0.30.0"
 psycopg = "^3.2.6"
 psycopg-binary = "^3.2.6"
 alembic = "^1.15.1"
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-bcrypt = "^4.3.0"
-pyjwt = "^2.10.1"
+shared = { path = "../shared", develop = true }
 
-[tool.poetry.group.dev.dependencies]
-
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

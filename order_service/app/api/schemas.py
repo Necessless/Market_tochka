@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from core.models.orders import Direction, OrderStatus
 import uuid
 import datetime
-from api_v1.admin.schemas import Ok
+from core.schemas.Responses import Ok
 
 class Order_Body_POST(BaseModel):
     direction: Direction

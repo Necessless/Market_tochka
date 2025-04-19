@@ -1,17 +1,6 @@
 from pydantic import BaseModel, Field
 from core.models.Users import AuthRole
-import uuid 
 from typing import List
-
-
-class UserBase(BaseModel):
-    id: uuid.UUID
-    name: str 
-    role: AuthRole 
-
-
-class UserRegister(UserBase):
-    api_key: str 
 
 
 class NewUser(BaseModel):

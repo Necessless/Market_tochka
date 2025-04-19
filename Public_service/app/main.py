@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import uvicorn
-from shared.core.config import settings
-from api_v1 import router as api_router
-from shared.core.database import db_helper
+from core.config import settings
+from api.router import router 
+from core.database import db_helper
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,10 +17,9 @@ main_app = FastAPI(lifespan=lifespan)
 
 @main_app.get("/")
 async def root():
-    print(settings.model_dump())
-    return {"message": "Сервер запущен"}
+    return {"message": "Users(public) service is running"}
 
-main_app.include_router(api_router, prefix=settings.api.prefix)
+main_app.include_router(router, prefix=settings.api.prefix)
 
 
 if __name__ == "__main__":
