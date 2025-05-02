@@ -2,7 +2,7 @@ from sqlalchemy import select
 from .schemas import Order_Body_POST, Ok
 from core.models import User, Order
 import uuid
-from core.models.orders import Order_Type, OrderStatus
+from order_service.models.orders import Order_Type, OrderStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 from .dependencies import (
     validate_and_return_limit_balance, 
@@ -109,3 +109,47 @@ async def service_cancel_order(
         session=session
     )
     return Ok()
+
+
+async def service_get_orderbook(
+        ticker: str,
+        limit: int,
+        session: AsyncSession
+) -> OrderBook:
+    query_ask = (
+        select(func.sum(Order.quantity), Order.price)
+        .filter(
+            Order.instrument_ticker == ticker,
+            Order.direction == Direction.BUY,
+            Order.order_type == Order_Type.LIMIT,
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.desc())
+        .limit(limit)
+    )
+    query_bid = (
+        select(func.sum(Order.quantity), Order.price)
+        .filter(
+            Order.instrument_ticker == ticker,
+            Order.direction == Direction.SELL,
+            Order.order_type == Order_Type.LIMIT,
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.asc())
+        .limit(limit)
+    )
+    res_ask = await session.execute(query_ask)
+    res_bid = await session.execute(query_bid)
+
+    res_ask = res_ask.all()
+    res_bid = res_bid.all()
+    
+    res_ask = [L2OrderBook(price=price, qty=qty) for qty, price in res_ask]
+    res_bid = [L2OrderBook(price=price, qty=qty) for qty, price in res_bid]
+
+    return OrderBook(
+        bid_levels=res_bid,
+        ask_levels=res_ask
+    )

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "order_service"
+name = "public_service"
 version = "0.1.0"
 description = ""
 authors = ["Александр <av.sanya@yandex.ru>"]

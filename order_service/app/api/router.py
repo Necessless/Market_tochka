@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from .schemas import Order_Body_POST, Create_Order_Response
 from core.models import Order
 from core.schemas.Responses import Ok
-from core.auth import api_key_header
+from user_service.app.api.auth import api_key_header
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import db_helper
 from .dependencies import get_user
@@ -71,3 +71,12 @@ async def cancel_order(
     await session.commit()
     return result
     
+
+@router.get("/orderbook/{ticker}", response_model=OrderBook)
+async def get_orderbook(
+    ticker: str, 
+    limit: int = Query(default=10),
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    orderbook = await service_get_orderbook(ticker=ticker, limit=limit, session=session)
+    return orderbook

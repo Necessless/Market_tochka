@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, Field
-from core.models.orders import Direction, OrderStatus
+from order_service.models.orders import Direction, OrderStatus
 import uuid
 import datetime
 from core.schemas.Responses import Ok
