@@ -1,5 +1,6 @@
+from enum import Enum
 import uuid
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 
 class AuthRole(Enum):

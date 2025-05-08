@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
 from config import settings
-
+from routes.users_router import router as users_router 
 
 main_app = FastAPI()
 
@@ -10,7 +10,7 @@ async def root():
     print(settings.model_dump())
     return {"message": "Сервер запущен"}
 
-
+main_app.include_router(users_router, prefix=(settings.api.v1.prefix + settings.api.public))
 
 if __name__ == "__main__":
     uvicorn.run(

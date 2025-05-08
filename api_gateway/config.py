@@ -20,10 +20,13 @@ class ApiPrefix(BaseModel):
 
 
 class ApiURLS(BaseModel):
-    user_url: str 
-    balance_url: str
-    order_url: str
+    users: str 
+    balances: str
+    orders: str
 
+class HashConfig(BaseModel):
+    secret: str
+    algorithm: str
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -34,7 +37,7 @@ class Settings(BaseSettings):
         )
     run: RunConfig = RunConfig()
     api: ApiPrefix = ApiPrefix()
-    urls: ApiURLS = ApiURLS()
-
+    hash: HashConfig
+    urls: ApiURLS 
 
 settings = Settings()
