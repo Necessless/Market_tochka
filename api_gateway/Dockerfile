@@ -20,8 +20,6 @@ COPY ./pyproject.toml ./poetry.lock /backend/
 RUN /usr/local/bin/poetry install --no-root 
 
 COPY ./app ./app
-COPY ./alembic ./
-COPY alembic.ini ./
 
 EXPOSE 8000
 
