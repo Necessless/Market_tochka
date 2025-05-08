@@ -1,6 +1,9 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from core.models import Balance
+from models.Users import AuthRole, User
+from .schemas import UserBase
+from fastapi import HTTPException
+import uuid
 
 
 def is_admin_user(user: UserBase) -> bool:

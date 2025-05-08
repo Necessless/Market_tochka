@@ -1,16 +1,16 @@
 from fastapi import APIRouter, HTTPException
 import httpx
 from schemas.users_DTO import NewUser, UserRegister
-
+from config import settings
 
 router = APIRouter(tags=["public"])
 
-@router.post("/register", response_model=UserRegister)
+@router.post("/register")
 async def register_user(data: NewUser):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                f"{settings.USERS_SERVICE_URL}/internal/register",
+                f"{settings.urls.user_url}/register",
                 json=data.dict(),
                 timeout=5.0
             )

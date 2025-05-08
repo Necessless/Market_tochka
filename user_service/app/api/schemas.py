@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from app.models.Users import AuthRole
+from models.Users import AuthRole
 from typing import List
 import uuid
 

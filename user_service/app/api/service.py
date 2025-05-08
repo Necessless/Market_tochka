@@ -1,14 +1,14 @@
 from fastapi import HTTPException
-from sqlalchemy import select, func
-from typing import Sequence, Dict
-from core.models import User, Balance, Instrument, Order
-from order_service.models.orders import Order_Type, OrderStatus, Direction
-from .schemas import NewUser, OrderBook, L2OrderBook
+from sqlalchemy import select
+import uuid
+from typing import Sequence
+from models import User
+from .schemas import NewUser
 from sqlalchemy.ext.asyncio import AsyncSession 
-from user_service.app.api.auth import (
+from .auth import (
     create_token
 )
-from core.schemas.Users_DTO import UserBase, UserRegister
+from .schemas import UserBase, UserRegister
 
 
 async def get_user(
@@ -55,7 +55,7 @@ async def get_all_users(
 
 
 async def service_delete_user(
-        user_id: UUID,
+        user_id: uuid.UUID,
         session: AsyncSession
 ) -> UserRegister:
     statement = select(User).filter(User.id == user_id)

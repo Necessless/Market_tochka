@@ -1,19 +1,9 @@
-from fastapi import Depends, HTTPException, Header
-import jwt
+from fastapi import HTTPException, Header
 from config import settings
-from passlib.context import CryptContext
+import jwt
 
 SECRET_KEY = settings.hash.secret
 ALGORITHM = settings.hash.algorithm
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def create_token(data: dict) -> str:
-    to_encode = data.copy()
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
 
 def api_key_header(authorization: str = Header(...)) -> str:
     if not authorization.startswith("TOKEN "):

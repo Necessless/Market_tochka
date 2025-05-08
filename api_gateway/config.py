@@ -19,6 +19,12 @@ class ApiPrefix(BaseModel):
     order: str ="/order"
 
 
+class ApiURLS(BaseModel):
+    user_url: str 
+    balance_url: str
+    order_url: str
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -28,6 +34,7 @@ class Settings(BaseSettings):
         )
     run: RunConfig = RunConfig()
     api: ApiPrefix = ApiPrefix()
+    urls: ApiURLS = ApiURLS()
 
 
 settings = Settings()

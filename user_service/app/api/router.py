@@ -1,15 +1,13 @@
 from typing import Sequence
 from fastapi import (APIRouter, Depends,)
-from fastapi.params import Query
-from sqlalchemy import select
-from core.database import db_helper
-from core.models import Instrument, Transaction
-from .schemas import (NewUser, OrderBook,)
-from core.schemas.Instruments_DTO import Instrument_Base 
-from core.schemas.Users_DTO import UserBase, UserRegister
+from database import db_helper
+import uuid
+from .schemas import NewUser
+from .schemas import UserBase, UserRegister
 from sqlalchemy.ext.asyncio import AsyncSession
-from .service import (get_all_users, create_user, get_user, service_get_orderbook)
-from user_service.app.api.auth import api_key_header
+from .service import get_all_users, create_user, get_user, service_delete_user
+from .dependencies import is_admin_user
+from .auth import api_key_header
 
 
 router = APIRouter(tags=["public"])
@@ -47,7 +45,7 @@ async def get_current_user(
 
 @router.delete("/user/{user_id}", tags=["user"], response_model=UserRegister)
 async def delete_user(
-    user_id: UUID,
+    user_id: uuid.UUID,
     user_name: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
