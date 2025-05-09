@@ -41,7 +41,7 @@ async def create_user(
     return UserRegister(
         id=user.id,
         name=user.name,
-        role=user.role,
+        role=user.role.value,
         api_key=token
     )
 
