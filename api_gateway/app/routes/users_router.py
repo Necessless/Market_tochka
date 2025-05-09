@@ -9,9 +9,11 @@ router = APIRouter(tags=["public"])
 async def register_user(data: NewUser):
     async with httpx.AsyncClient() as client:
         try:
+            print(data.model_dump())
+            user = {"name": data.name, "role":data.role.value}
             response = await client.post(
                 f"{settings.urls.users}/register",
-                json=data.dict(),
+                json=user,
                 timeout=5.0
             )
         except httpx.RequestError:

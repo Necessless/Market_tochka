@@ -25,7 +25,7 @@ COPY ./entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x /backend/entrypoint.sh
 
-WORKDIR /backend/app
+WORKDIR /backend
 
 EXPOSE 8000
 
