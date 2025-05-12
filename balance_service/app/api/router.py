@@ -1,17 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import db_helper
-from uuid import UUID
-from user_service.app.api.auth import api_key_header
-from .dependencies import get_user
-from core.schemas.Users_DTO import UserRegister
-from core.schemas.Instruments_DTO import Instrument_Base
-from core.schemas.Responses import Ok
-from ..schemas.balance_DTO import Deposit_Withdraw_Instrument_V1
+from typing import Sequence
+from models import Transaction, Balance, Instrument
+from schemas.balance_DTO import Instrument_Base, Deposit_Withdraw_Instrument_V1
+from schemas.responses import Ok 
 from .service import (
-    service_delete_user,
-    create_instrument,
-    service_delete_instrument,
+    get_instrument_by_ticker,
     service_balance_deposit,
     service_balance_withdraw,
 )
@@ -19,57 +16,70 @@ from .service import (
 router = APIRouter(tags=["admin"])
 
 
-
-
-
 @router.post("/instrument", response_model=Instrument_Base)
-async def post_instrument(
+async def add_instrument(
     data: Instrument_Base,
-    authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    curr_user = await get_user(session, authorization)
-    if is_admin_user(curr_user):
-        instrument = await create_instrument(data.name, data.ticker, session)
-        return instrument
+    instrument = Instrument(name=data.name, ticker=data.ticker)
+    session.add(instrument)
+    await session.commit()
+    return Instrument_Base(
+        name=instrument.name,
+        ticker=instrument.ticker
+    )
 
 
 @router.delete("/instrument/{ticker}", response_model=Ok)
 async def delete_instrument(
     ticker: str,
-    authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    curr_user = await get_user(session, authorization)
-    if is_admin_user(curr_user):
-        result = await service_delete_instrument(ticker, session)
-        return result
+    result = await get_instrument_by_ticker(ticker=ticker, session=session)
+    await session.delete(result)
+    await session.commit()
+    return Ok()
+
 
 
 @router.post("/balance/deposit", tags=["balance"], response_model=Ok)
 async def balance_deposit(
     data: Deposit_Withdraw_Instrument_V1,
-    authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
 ) -> Ok:
-    curr_user = await get_user(session, authorization)
-    if is_admin_user(curr_user):
-        result = await service_balance_deposit(data, session)
-        return result
-    raise HTTPException(status_code=405, detail="method not allowed")
-
+    user = await get_user_by_id(data.user_id, session)
+    instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
+    statement = (
+        insert(Balance)
+        .values(user_name=user.name, instrument_ticker=instrument.ticker, _available=data.amount)
+        .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"available": Balance._available + data.amount})
+    )
+    await session.execute(statement)
+    await session.commit()
+    return Ok()
+ 
 
 @router.post("/balance/withdraw", tags=["balance"], response_model=Ok)
 async def balance_withdraw(
     data: Deposit_Withdraw_Instrument_V1,
-    authorization: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
 ) -> Ok:
-    curr_user = await get_user(session, authorization)
-    if is_admin_user(curr_user):
-        result = await service_balance_withdraw(data, session)
-        return result
-    raise HTTPException(status_code=405, detail="method not allowed")
+    user = await get_user_by_id(data.user_id, session)
+    query = select(Balance).filter(Balance.user_name == user.name, Balance.instrument_ticker == data.ticker)
+    balance = await session.scalar(query)
+    if not balance:
+        raise HTTPException(status_code=404, detail="Instrument with this ticker is not found in user's wallet")
+    new_quantity = balance.available - data.amount
+    if new_quantity == 0 and balance.reserved == 0:
+        await session.delete(balance)
+    elif new_quantity < 0:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+    else:
+        balance.available = new_quantity
+        session.add(balance)
+    await session.commit()
+    return Ok()
+
 
 
 @router.get("/instrument", response_model=Sequence[Instrument_Base])
