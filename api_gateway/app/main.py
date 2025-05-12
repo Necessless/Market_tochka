@@ -10,7 +10,7 @@ async def root():
     print(settings.model_dump())
     return {"message": "Сервер запущен"}
 
-main_app.include_router(users_router, prefix=(settings.api.v1.prefix + settings.api.public))
+main_app.include_router(users_router, prefix=settings.api.v1.prefix)
 
 if __name__ == "__main__":
     uvicorn.run(

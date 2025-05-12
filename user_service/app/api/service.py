@@ -33,7 +33,7 @@ async def create_user(
         session: AsyncSession,
         data: NewUser
 ) -> UserRegister:
-    to_encrypt = {"name": data.name}
+    to_encrypt = {"name": data.name, "role": data.role.value}
     token = create_token(to_encrypt)
     user = User(name=data.name, role=data.role)
     session.add(user)
@@ -62,7 +62,7 @@ async def service_delete_user(
     user_to_delete = await session.scalar(statement)
     if not user_to_delete:
         raise HTTPException(status_code=404, detail="User with this id not found")
-    to_encrypt = {"name": user_to_delete.name}
+    to_encrypt = {"name": user_to_delete.name, "role": user_to_delete.role.value}
     token = create_token(to_encrypt)
     await session.delete(user_to_delete)
     await session.commit()

@@ -43,16 +43,13 @@ async def get_current_user(
     return user
 
 
-@router.delete("/user/{user_id}", tags=["user"], response_model=UserRegister)
+@router.delete("/admin/user/{user_id}", tags=["user"], response_model=UserRegister)
 async def delete_user(
     user_id: uuid.UUID,
-    user_name: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter),
-):
-    curr_user = await get_user(session, user_name)
-    if is_admin_user(curr_user):
-        res = await service_delete_user(user_id, session)
-        return res
+    ):
+    res = await service_delete_user(user_id, session)
+    return res
 
 
 
