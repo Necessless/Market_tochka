@@ -17,13 +17,16 @@ WORKDIR /backend
 
 COPY ./pyproject.toml ./poetry.lock /backend/
 
+
 RUN /usr/local/bin/poetry install --no-root 
 
 COPY ./app ./app
-COPY ./alembic ./
-COPY alembic.ini ./
+COPY ./entrypoint.sh ./entrypoint.sh
+
+RUN chmod +x /backend/entrypoint.sh
+
+WORKDIR /backend
 
 EXPOSE 8000
 
-CMD ["poetry", "run", "uvicorn", "main:main_app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-
+ENTRYPOINT ["/backend/entrypoint.sh"]

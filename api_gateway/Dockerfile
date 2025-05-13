@@ -19,10 +19,6 @@ COPY ./pyproject.toml ./poetry.lock /backend/
 
 RUN /usr/local/bin/poetry install --no-root 
 
-COPY ./app ./app
-COPY ./alembic ./
-COPY alembic.ini ./
-
 EXPOSE 8000
 
 CMD ["poetry", "run", "uvicorn", "main:main_app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
