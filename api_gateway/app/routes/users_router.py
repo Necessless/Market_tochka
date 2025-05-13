@@ -5,7 +5,7 @@ from config import settings
 import uuid
 from auth_check import api_key_header
 
-router = APIRouter()
+router = APIRouter(prefix=settings.api.v1.prefix)
 
 @router.post("/public/register", tags=['public'])
 async def register_user(data: NewUser):
@@ -13,7 +13,7 @@ async def register_user(data: NewUser):
         try:
             user = {"name": data.name, "role":data.role.value}
             response = await client.post(
-                f"{settings.urls.users}/register",
+                f"{settings.urls.users}/v1/public/register",
                 json=user,
                 timeout=5.0
             )
@@ -36,7 +36,7 @@ async def delete_user(
             log = {"requester": user_name, "requester_role": role, "userid_to_delete": user_id}
             print(log)
             response = await client.delete(
-                f"{settings.urls.users}/admin/user/{user_id}",
+                f"{settings.urls.users}/v1/admin/user/{user_id}",
                 timeout=5.0
             )
         except httpx.RequestError:

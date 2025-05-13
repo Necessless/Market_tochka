@@ -2,21 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import db_helper
+from database import db_helper
+from config import settings
 from typing import Sequence
 from models import Transaction, Balance, Instrument
 from schemas.balance_DTO import Instrument_Base, Deposit_Withdraw_Instrument_V1
 from schemas.responses import Ok 
 from .service import (
     get_instrument_by_ticker,
-    service_balance_deposit,
-    service_balance_withdraw,
 )
 
-router = APIRouter(tags=["admin"])
+router = APIRouter(tags=["admin"], prefix=settings.api.v1.prefix)
 
 
-@router.post("/instrument", response_model=Instrument_Base)
+@router.post("/public/instrument", response_model=Instrument_Base)
 async def add_instrument(
     data: Instrument_Base,
     session: AsyncSession = Depends(db_helper.session_getter),
@@ -28,6 +27,7 @@ async def add_instrument(
         name=instrument.name,
         ticker=instrument.ticker
     )
+    
 
 
 @router.delete("/instrument/{ticker}", response_model=Ok)
@@ -47,7 +47,7 @@ async def balance_deposit(
     data: Deposit_Withdraw_Instrument_V1,
     session: AsyncSession = Depends(db_helper.session_getter),
 ) -> Ok:
-    user = await get_user_by_id(data.user_id, session)
+    # user = await get_user_by_id(data.user_id, session)
     instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
     statement = (
         insert(Balance)
@@ -64,7 +64,7 @@ async def balance_withdraw(
     data: Deposit_Withdraw_Instrument_V1,
     session: AsyncSession = Depends(db_helper.session_getter),
 ) -> Ok:
-    user = await get_user_by_id(data.user_id, session)
+    # user = await get_user_by_id(data.user_id, session)
     query = select(Balance).filter(Balance.user_name == user.name, Balance.instrument_ticker == data.ticker)
     balance = await session.scalar(query)
     if not balance:
@@ -82,7 +82,7 @@ async def balance_withdraw(
 
 
 
-@router.get("/instrument", response_model=Sequence[Instrument_Base])
+@router.get("/public/instrument", response_model=Sequence[Instrument_Base])
 async def get_all_instruments(
     session: AsyncSession = Depends(db_helper.session_getter)
 ):

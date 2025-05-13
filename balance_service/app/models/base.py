@@ -1,7 +1,7 @@
 from sqlalchemy import MetaData
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import DeclarativeBase
-from app.config import settings
+from config import settings
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 

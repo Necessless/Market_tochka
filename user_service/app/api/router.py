@@ -6,11 +6,11 @@ from .schemas import NewUser
 from .schemas import UserBase, UserRegister
 from sqlalchemy.ext.asyncio import AsyncSession
 from .service import get_all_users, create_user, get_user, service_delete_user
-from .dependencies import is_admin_user
 from .auth import api_key_header
+from config import settings
 
 
-router = APIRouter(tags=["public"])
+router = APIRouter(tags=["public"], prefix=settings.api.v1.prefix)
 
 
 @router.get("/", response_model=Sequence[UserBase])
@@ -21,7 +21,7 @@ async def get_users(
     return users
 
 
-@router.post("/register", response_model=UserRegister)
+@router.post("/public/register", response_model=UserRegister)
 async def register_user(
     data: NewUser,
     session: AsyncSession = Depends(db_helper.session_getter)

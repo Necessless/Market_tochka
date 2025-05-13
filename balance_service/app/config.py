@@ -12,7 +12,7 @@ class ApiV1Prefix(BaseModel):
 
 
 class ApiPrefix(BaseModel):
-    prefix: str = "/api"
+    prefix: str = "/internal/api"
     v1: ApiV1Prefix = ApiV1Prefix()
     public: str = "/public"
     admin: str = "/admin"

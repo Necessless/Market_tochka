@@ -19,7 +19,7 @@ main_app = FastAPI(lifespan=lifespan)
 async def root():
     return {"message": "User service is running"}
 
-main_app.include_router(router)
+main_app.include_router(router, prefix=settings.api.prefix)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ services:
       context: ./api_gateway
     depends_on:
       - user_service
+      - balance_service
     ports:
       - "1432:8000"  
     networks:
@@ -29,6 +30,22 @@ services:
     volumes:
       - ./user_service/app:/backend/app
 
+  balance_service:
+    build:
+      context: ./balance_service
+    depends_on:
+      - balance_db
+    ports:
+      - "8002:8000"  
+    networks:
+      - app-network
+    env_file:
+      - ./balance_service/.env  
+    restart: always
+    volumes:
+      - ./balance_service/app:/backend/app
+
+
   user_db:
     image: postgres:17
     volumes:
@@ -43,8 +60,23 @@ services:
     ports:
     - "5433:5432"
 
+  balance_db:
+    image: postgres:17
+    volumes:
+      - balance_pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_BALANCES}
+    ports:
+    - "5434:5432"
+
 volumes:
   user_pg_data:
+  balance_pg_data:
 
 networks:
   app-network:
