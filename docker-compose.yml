@@ -45,7 +45,6 @@ services:
     volumes:
       - ./balance_service/app:/backend/app
 
-
   user_db:
     image: postgres:17
     volumes:
