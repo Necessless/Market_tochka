@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -10,12 +11,13 @@ from schemas.balance_DTO import Instrument_Base, Deposit_Withdraw_Instrument_V1
 from schemas.responses import Ok 
 from .service import (
     get_instrument_by_ticker,
+    get_balance_for_user
 )
 
 router = APIRouter(tags=["admin"], prefix=settings.api.v1.prefix)
 
 
-@router.post("/public/instrument", response_model=Instrument_Base)
+@router.post("/admin/instrument", response_model=Instrument_Base)
 async def add_instrument(
     data: Instrument_Base,
     session: AsyncSession = Depends(db_helper.session_getter),
@@ -30,7 +32,7 @@ async def add_instrument(
     
 
 
-@router.delete("/instrument/{ticker}", response_model=Ok)
+@router.delete("/admin/instrument/{ticker}", response_model=Ok)
 async def delete_instrument(
     ticker: str,
     session: AsyncSession = Depends(db_helper.session_getter),
@@ -40,7 +42,13 @@ async def delete_instrument(
     await session.commit()
     return Ok()
 
-
+@router.get("/balance/{user_id}")
+async def get_balance(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(db_helper.session_getter),
+):
+    result = await get_balance_for_user(session=session, id=user_id)
+    return result
 
 @router.post("/balance/deposit", tags=["balance"], response_model=Ok)
 async def balance_deposit(

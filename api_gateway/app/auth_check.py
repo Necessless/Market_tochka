@@ -1,7 +1,6 @@
-from fastapi import Depends, HTTPException, Header
+from fastapi import HTTPException, Header
 from config import settings
 import jwt
-from httpx_helper import httpx_helper
 
 SECRET_KEY = settings.hash.secret
 ALGORITHM = settings.hash.algorithm

@@ -1,4 +1,6 @@
-from sqlalchemy import select
+from typing import Dict
+import uuid
+from sqlalchemy import select, func
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from schemas.responses import Ok
@@ -241,31 +243,31 @@ async def get_instrument_by_ticker(
     return instrument
 
 
-# async def get_balance_for_user(
-#         session: AsyncSession,
-#         name: str
-# ) -> Dict[str, int]:
-#     # query = text("""WITH balance AS (SELECT available, reserved, instrument_ticker
-#     #     FROM public.users_balance
-#     #     WHERE user_name = :name
-#     #     ),
-#     #     instrument AS (SELECT ticker FROM public.instruments)
-#     #     SELECT instrument.ticker, COALESCE(balance.available,0), COALESCE(balance.reserved,0)
-#     #     FROM balance
-#     #     RIGHT JOIN instrument
-#     #     ON instrument.ticker = balance.instrument_ticker;
-#     # """) raw sql запрос на всякий случай
-#     statement_balance = select(Balance).filter(Balance.user_name == name)
-#     statement_instrument = select(Instrument)
-#     statement_balance = statement_balance.cte('balance')
-#     statement_instrument = statement_instrument.cte('instrument')
-#     statement = (
-#         select(statement_instrument.c.ticker, func.coalesce(statement_balance.c.available,0), func.coalesce(statement_balance.c.reserved,0))
-#         .select_from(statement_instrument)
-#         .outerjoin(statement_balance, statement_instrument.c.ticker == statement_balance.c.instrument_ticker)
-#     )
-#     result = await session.execute(statement)
-#     balances = result.all()
-#     if not result:
-#         raise HTTPException(status_code=404, detail="User is not exists")
-#     return {ticker: available + reserved for ticker, available, reserved in balances}
+async def get_balance_for_user(
+        session: AsyncSession,
+        id: uuid.UUID
+) -> Dict[str, int]:
+    # query = text("""WITH balance AS (SELECT available, reserved, instrument_ticker
+    #     FROM public.users_balance
+    #     WHERE user_name = :name
+    #     ),
+    #     instrument AS (SELECT ticker FROM public.instruments)
+    #     SELECT instrument.ticker, COALESCE(balance.available,0), COALESCE(balance.reserved,0)
+    #     FROM balance
+    #     RIGHT JOIN instrument
+    #     ON instrument.ticker = balance.instrument_ticker;
+    # """) raw sql запрос на всякий случай
+    statement_balance = select(Balance).filter(Balance.user_id == id)
+    statement_instrument = select(Instrument)
+    statement_balance = statement_balance.cte('balance')
+    statement_instrument = statement_instrument.cte('instrument')
+    statement = (
+        select(statement_instrument.c.ticker, func.coalesce(statement_balance.c.available,0), func.coalesce(statement_balance.c.reserved,0))
+        .select_from(statement_instrument)
+        .outerjoin(statement_balance, statement_instrument.c.ticker == statement_balance.c.instrument_ticker)
+    )
+    result = await session.execute(statement)
+    balances = result.all()
+    if not result:
+        raise HTTPException(status_code=404, detail="User is not exists")
+    return {ticker: available + reserved for ticker, available, reserved in balances}

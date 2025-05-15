@@ -19,6 +19,8 @@ async def register_user(data: NewUser, client: httpx.AsyncClient = Depends(httpx
         )
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис Пользователей временно недоступен")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(e)
     return response.json()
 
 
@@ -40,4 +42,6 @@ async def delete_user(
         )
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис Пользователей временно недоступен")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(e)
     return response.json()
