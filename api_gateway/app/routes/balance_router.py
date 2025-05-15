@@ -15,13 +15,14 @@ async def list_instruments(client: httpx.AsyncClient = Depends(httpx_helper.clie
         raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
     return response.json()
 
+
 @router.post("/public/instrument", tags=['public'])
 async def create_instrument(
     data: Instrument_Base,
     client: httpx.AsyncClient = Depends(httpx_helper.client_getter),
     requester_info: tuple[str, str] = Depends(api_key_header)
 ):
-    user_name, role = requester_info
+    user_id, role = requester_info
     if role != "ADMIN":
         raise HTTPException(status_code=403, detail="Недостаточно прав для доступа")
     try:

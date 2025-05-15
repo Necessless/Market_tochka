@@ -6,7 +6,6 @@ from .schemas import NewUser
 from .schemas import UserBase, UserRegister
 from sqlalchemy.ext.asyncio import AsyncSession
 from .service import get_all_users, create_user, get_user, service_delete_user
-from .auth import api_key_header
 from config import settings
 
 
@@ -32,7 +31,6 @@ async def register_user(
 
 @router.get("/profile", response_model=UserBase)
 async def get_current_user(
-    user_name: str = Depends(api_key_header),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     """

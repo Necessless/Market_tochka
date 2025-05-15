@@ -1,7 +1,8 @@
-from ...shared.core.models.base import Base
+from base import Base
 from enum import Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import uuid
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import ForeignKey, DateTime, func
 
 
@@ -25,8 +26,9 @@ class Order(Base):
     __tablename__ = "orders"
 
     status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.NEW)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("Users.id", ondelete="CASCADE"))
-    user: Mapped["User"] = relationship(back_populates="orders")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True)
+        )
     timestamp: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=func.now())
     direction: Mapped[Direction] = mapped_column()
     instrument_ticker: Mapped[str] = mapped_column(ForeignKey("instruments.ticker", ondelete="CASCADE"))

@@ -33,11 +33,12 @@ async def create_user(
         session: AsyncSession,
         data: NewUser
 ) -> UserRegister:
-    to_encrypt = {"name": data.name, "role": data.role.value}
-    token = create_token(to_encrypt)
     user = User(name=data.name, role=data.role)
     session.add(user)
     await session.commit()
+    await session.refresh(user)
+    to_encrypt = {"id": str(user.id), "role": user.role.value}
+    token = create_token(to_encrypt)
     return UserRegister(
         id=user.id,
         name=user.name,

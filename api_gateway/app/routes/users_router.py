@@ -28,11 +28,11 @@ async def delete_user(
     requester_info: tuple[str, str] = Depends(api_key_header),
     client: httpx.AsyncClient = Depends(httpx_helper.client_getter)
 ):
-    user_name, role = requester_info
+    req_id, role = requester_info
     if role != "ADMIN":
         raise HTTPException(status_code=403, detail="Недостаточно прав для доступа")
     try:
-        log = {"requester": user_name, "requester_role": role, "userid_to_delete": user_id}
+        log = {"requester_id": req_id, "requester_role": role, "userid_to_delete": user_id}
         print(log)
         response = await client.delete(
             f"{settings.urls.users}/v1/admin/user/{user_id}",

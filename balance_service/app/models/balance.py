@@ -1,17 +1,19 @@
 from .base import Base
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 
-
+import uuid
 
 class Balance(Base):
     __tablename__ = "users_balance"
 
     id = None
 
-    user_name: Mapped[str] = mapped_column(
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         primary_key=True
-    )
+        )
 
     instrument_ticker: Mapped[str] = mapped_column(
         ForeignKey("instruments.ticker", ondelete="CASCADE"), 
