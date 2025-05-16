@@ -11,21 +11,21 @@ from .auth import (
 from .schemas import UserBase, UserRegister
 
 
-async def get_user(
+async def get_user_by_id(
         session: AsyncSession,
-        name: str,
+        user_id: str,
 ) -> UserBase:
-    query = select(User).where(User.name == name)
+    query = select(User).where(User.id == user_id)
     user = await session.scalar(query)
     if not user:
         raise HTTPException(
-            status_code=401, 
-            detail="Wrong Authentication token"
+            status_code=404, 
+            detail="User with this id is not exists"
             )
     return UserBase(
         id=user.id,
         name=user.name,
-        role=user.role,
+        role=user.role.value,
     )
 
 

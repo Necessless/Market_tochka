@@ -11,16 +11,13 @@ router = APIRouter(prefix=settings.api.v1.prefix)
 @router.post("/public/register", tags=['public'])
 async def register_user(data: NewUser, client: httpx.AsyncClient = Depends(httpx_helper.client_getter)):
     try:
-        user = {"name": data.name, "role": data.role.value}
         response = await client.post(
             f"{settings.urls.users}/v1/public/register",
-            json=user,
+            json=data.model_dump(mode="json"),
             timeout=5.0
         )
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис Пользователей временно недоступен")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(e)
     return response.json()
 
 
@@ -42,6 +39,4 @@ async def delete_user(
         )
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис Пользователей временно недоступен")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(e)
     return response.json()

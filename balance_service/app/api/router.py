@@ -50,33 +50,31 @@ async def get_balance(
     result = await get_balance_for_user(session=session, id=user_id)
     return result
 
-@router.post("/balance/deposit", tags=["balance"], response_model=Ok)
+@router.post("/admin/balance/deposit", tags=["balance"], response_model=Ok)
 async def balance_deposit(
     data: Deposit_Withdraw_Instrument_V1,
     session: AsyncSession = Depends(db_helper.session_getter),
 ) -> Ok:
-    # user = await get_user_by_id(data.user_id, session)
     instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
     statement = (
         insert(Balance)
-        .values(user_name=user.name, instrument_ticker=instrument.ticker, _available=data.amount)
-        .on_conflict_do_update(index_elements=["user_name", "instrument_ticker"], set_={"available": Balance._available + data.amount})
+        .values(user_id=data.user_id, instrument_ticker=instrument.ticker, _available=data.amount)
+        .on_conflict_do_update(index_elements=["user_id", "instrument_ticker"], set_={"available": Balance._available + data.amount})
     )
     await session.execute(statement)
     await session.commit()
     return Ok()
  
 
-@router.post("/balance/withdraw", tags=["balance"], response_model=Ok)
+@router.post("/admin/balance/withdraw", tags=["balance"], response_model=Ok)
 async def balance_withdraw(
     data: Deposit_Withdraw_Instrument_V1,
     session: AsyncSession = Depends(db_helper.session_getter),
 ) -> Ok:
-    # user = await get_user_by_id(data.user_id, session)
-    query = select(Balance).filter(Balance.user_name == user.name, Balance.instrument_ticker == data.ticker)
+    query = select(Balance).filter(Balance.user_id == data.user_id, Balance.instrument_ticker == data.ticker)
     balance = await session.scalar(query)
     if not balance:
-        raise HTTPException(status_code=404, detail="Instrument with this ticker is not found in user's wallet")
+        raise HTTPException(status_code=404, detail="Instrument with this ticker is not found in user's wallet or user id is not correct")
     new_quantity = balance.available - data.amount
     if new_quantity == 0 and balance.reserved == 0:
         await session.delete(balance)

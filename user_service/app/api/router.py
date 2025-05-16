@@ -5,7 +5,7 @@ import uuid
 from .schemas import NewUser
 from .schemas import UserBase, UserRegister
 from sqlalchemy.ext.asyncio import AsyncSession
-from .service import get_all_users, create_user, get_user, service_delete_user
+from .service import get_all_users, create_user, get_user_by_id, service_delete_user
 from config import settings
 
 
@@ -20,6 +20,15 @@ async def get_users(
     return users
 
 
+@router.get("/user/{user_id}", response_model=UserBase)
+async def get_user(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    user = await get_user_by_id(session, user_id=user_id)
+    return user
+
+
 @router.post("/public/register", response_model=UserRegister)
 async def register_user(
     data: NewUser,
@@ -29,16 +38,16 @@ async def register_user(
     return user
 
 
-@router.get("/profile", response_model=UserBase)
-async def get_current_user(
-    session: AsyncSession = Depends(db_helper.session_getter)
-):
-    """
-        send the secret key
-        e.g {"authorization":" TOKEN secret_key"}
-    """
-    user = await get_user(session=session, name=user_name)
-    return user
+# @router.get("/profile", response_model=UserBase)
+# async def get_current_user(
+#     session: AsyncSession = Depends(db_helper.session_getter)
+# ):
+#     """
+#         send the secret key
+#         e.g {"authorization":" TOKEN secret_key"}
+#     """
+#     user = await get_user(session=session, name=user_name)
+#     return user
 
 
 @router.delete("/admin/user/{user_id}", tags=["user"], response_model=UserRegister)

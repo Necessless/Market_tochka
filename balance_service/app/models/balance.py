@@ -1,6 +1,6 @@
 from .base import Base
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 
 import uuid
@@ -22,6 +22,10 @@ class Balance(Base):
 
     _available: Mapped[int] = mapped_column("available", default=0)
     _reserved: Mapped[int] = mapped_column("reserved", default=0)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'instrument_ticker', name='user_ticker_constraint'),
+    )
 
     @property
     def available(self):
