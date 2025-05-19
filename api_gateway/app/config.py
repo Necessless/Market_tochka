@@ -19,14 +19,20 @@ class ApiPrefix(BaseModel):
     order: str ="/order"
 
 
+class RabbitMq(BaseModel):
+    url: str 
+
+
 class ApiURLS(BaseModel):
     users: str 
     balances: str
     orders: str
 
+
 class HashConfig(BaseModel):
     secret: str
     algorithm: str
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -39,5 +45,7 @@ class Settings(BaseSettings):
     api: ApiPrefix = ApiPrefix()
     hash: HashConfig
     urls: ApiURLS 
+    rabbitmq: RabbitMq
 
+    
 settings = Settings()

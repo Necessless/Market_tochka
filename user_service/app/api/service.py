@@ -11,21 +11,21 @@ from .auth import (
 from .schemas import UserBase, UserRegister
 
 
-async def get_user(
+async def get_user_by_id(
         session: AsyncSession,
-        name: str,
+        user_id: str,
 ) -> UserBase:
-    query = select(User).where(User.name == name)
+    query = select(User).where(User.id == user_id)
     user = await session.scalar(query)
     if not user:
         raise HTTPException(
-            status_code=401, 
-            detail="Wrong Authentication token"
+            status_code=404, 
+            detail="User with this id is not exists"
             )
     return UserBase(
         id=user.id,
         name=user.name,
-        role=user.role,
+        role=user.role.value,
     )
 
 
@@ -33,11 +33,12 @@ async def create_user(
         session: AsyncSession,
         data: NewUser
 ) -> UserRegister:
-    to_encrypt = {"name": data.name, "role": data.role.value}
-    token = create_token(to_encrypt)
     user = User(name=data.name, role=data.role)
     session.add(user)
     await session.commit()
+    await session.refresh(user)
+    to_encrypt = {"id": str(user.id), "role": user.role.value}
+    token = create_token(to_encrypt)
     return UserRegister(
         id=user.id,
         name=user.name,

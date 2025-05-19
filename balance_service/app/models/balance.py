@@ -1,17 +1,19 @@
 from .base import Base
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
 
-
+import uuid
 
 class Balance(Base):
     __tablename__ = "users_balance"
 
     id = None
 
-    user_name: Mapped[str] = mapped_column(
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         primary_key=True
-    )
+        )
 
     instrument_ticker: Mapped[str] = mapped_column(
         ForeignKey("instruments.ticker", ondelete="CASCADE"), 
@@ -20,6 +22,10 @@ class Balance(Base):
 
     _available: Mapped[int] = mapped_column("available", default=0)
     _reserved: Mapped[int] = mapped_column("reserved", default=0)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'instrument_ticker', name='user_ticker_constraint'),
+    )
 
     @property
     def available(self):
@@ -37,14 +43,22 @@ class Balance(Base):
     def reserved(self, value):
         self._reserved = value
 
-    def add_reserved(self, value):
+    def available_to_reserved(self, value):
         if value > self._available:
             raise ValueError("Not enough quantity on balance to reserve this amount")
+        print(f"резервируем:{value}")
         self._available -= value
         self._reserved += value
 
-    def remove_reserved(self, value):
+    def reserved_to_available(self, value):
         if value > self._reserved:
             raise ValueError("Not enough quantity reserved on balance to unreserve this amount")
         self._available += value
+        self._reserved -= value
+
+    def remove_from_reserved(self, value):
+        print(f"возвращаем:{value}")
+        if value > self._reserved:
+            raise ValueError("Not enough quantity reserved on balance to sell this amount")
+        
         self._reserved -= value

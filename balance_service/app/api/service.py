@@ -1,25 +1,29 @@
-from sqlalchemy import select
+from typing import Dict
+import uuid
+from sqlalchemy import delete, select, func
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from schemas.responses import Ok
 from schemas.balance_DTO import Instrument_Base
 from schemas.balance_DTO import Deposit_Withdraw_Instrument_V1
 from models import Instrument, Balance, Transaction
+from database import db_helper
 
 
 
-async def get_balance_for_user_by_ticker(
-        user_name: str,
-        ticker: str,
-        session: AsyncSession
-) -> Balance | None:
-    query = (
-        select(Balance)
-        .filter(Balance.user_name == user_name, Balance.instrument_ticker == ticker)
-    )
-    result = await session.execute(query)
-    balance = result.scalar_one_or_none()
-    return balance
+# async def get_balance_for_user_by_ticker(
+#         user_id: uuid.UUID,
+#         ticker: str,
+#         session: AsyncSession
+# ) -> Balance | None:
+#     query = (
+#         select(Balance)
+#         .filter(Balance.user_id == user_id, Balance.instrument_ticker == ticker)
+#     )
+#     result = await session.scalar(query)
+#     if not result:
+#         raise HTTPException()
+#     return balance
 
 
 # async def validate_and_return_limit_balance(
@@ -120,22 +124,7 @@ async def get_balance_for_user_by_ticker(
 #     return balance
 
 
-async def create_transaction(
-        instrument_ticker: str,
-        amount: int,
-        price: int,
-        session: AsyncSession
-) -> None:
-    transaction = Transaction(
-        instrument_ticker=instrument_ticker, 
-        amount=amount,
-        price=price,
-    )
-    if transaction:
-        session.add(transaction)
-    else:
-        raise HTTPException(status_code=400, detail="Cannot create transaction with this ticker, price and amount")
-    
+
     
 # async def check_balance_for_market_buy(
 #         balance: int,
@@ -241,31 +230,39 @@ async def get_instrument_by_ticker(
     return instrument
 
 
-# async def get_balance_for_user(
-#         session: AsyncSession,
-#         name: str
-# ) -> Dict[str, int]:
-#     # query = text("""WITH balance AS (SELECT available, reserved, instrument_ticker
-#     #     FROM public.users_balance
-#     #     WHERE user_name = :name
-#     #     ),
-#     #     instrument AS (SELECT ticker FROM public.instruments)
-#     #     SELECT instrument.ticker, COALESCE(balance.available,0), COALESCE(balance.reserved,0)
-#     #     FROM balance
-#     #     RIGHT JOIN instrument
-#     #     ON instrument.ticker = balance.instrument_ticker;
-#     # """) raw sql запрос на всякий случай
-#     statement_balance = select(Balance).filter(Balance.user_name == name)
-#     statement_instrument = select(Instrument)
-#     statement_balance = statement_balance.cte('balance')
-#     statement_instrument = statement_instrument.cte('instrument')
-#     statement = (
-#         select(statement_instrument.c.ticker, func.coalesce(statement_balance.c.available,0), func.coalesce(statement_balance.c.reserved,0))
-#         .select_from(statement_instrument)
-#         .outerjoin(statement_balance, statement_instrument.c.ticker == statement_balance.c.instrument_ticker)
-#     )
-#     result = await session.execute(statement)
-#     balances = result.all()
-#     if not result:
-#         raise HTTPException(status_code=404, detail="User is not exists")
-#     return {ticker: available + reserved for ticker, available, reserved in balances}
+async def get_balance_for_user(
+        session: AsyncSession,
+        id: uuid.UUID
+) -> Dict[str, int]:
+    statement_balance = select(Balance).filter(Balance.user_id == id)
+    statement_instrument = select(Instrument)
+    statement_balance = statement_balance.cte('balance')
+    statement_instrument = statement_instrument.cte('instrument')
+    statement = (
+        select(statement_instrument.c.ticker, func.coalesce(statement_balance.c.available,0), func.coalesce(statement_balance.c.reserved,0))
+        .select_from(statement_instrument)
+        .outerjoin(statement_balance, statement_instrument.c.ticker == statement_balance.c.instrument_ticker)
+    )
+    result = await session.execute(statement)
+    balances = result.all()
+    if not result:
+        raise HTTPException(status_code=404, detail="User is not exists")
+    return {ticker: available + reserved for ticker, available, reserved in balances}
+
+
+async def handle_user_delete(user_id: str):
+    async with db_helper.async_session_factory() as session:
+        print(user_id)
+        statement = delete(Balance).filter(Balance.user_id == user_id)
+        await session.execute(statement)
+        await session.commit()
+
+
+async def handle_ticker_delete(ticker: str):
+    async with db_helper.async_session_factory() as session:
+        statement = delete(Balance).filter(Balance.instrument_ticker == ticker)
+        statement_trans = delete(Transaction).filter(Transaction.instrument_ticker == ticker)
+        await session.execute(statement)
+        await session.execute(statement_trans)
+        await session.commit()
+    

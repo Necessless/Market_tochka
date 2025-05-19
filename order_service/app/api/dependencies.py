@@ -1,28 +1,11 @@
 from typing import List, Sequence
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
+from database import db_helper
 from sqlalchemy import select
-from core.schemas.Users_DTO import UserBase
-from core.models import Order, Transaction, User, Balance, Instrument
-from order_service.models.orders import Direction, OrderStatus, Order_Type
-from user_service.models.Users import AuthRole
 from sqlalchemy.ext.asyncio import AsyncSession
 from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET, Order_Body_POST
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
+from models import Order
+from models.orders import Direction, Order_Type, OrderStatus
 
 async def find_orders_for_market_transaction(
         order: Order,
@@ -54,11 +37,9 @@ async def find_orders_for_market_transaction(
     return orders.all()
 
 
-
-
 async def find_orders_for_limit_transaction(
         order: Order,
-        session: AsyncSession
+        session: AsyncSession 
 ) -> Sequence[Order]:
     if order.direction == Direction.SELL:
         query = select(Order).where(
@@ -84,9 +65,6 @@ async def find_orders_for_limit_transaction(
             ).order_by(Order.price.asc())
     orders = await session.scalars(query)
     return orders.all()
-
-
-
 
 
 def serialize_orders(
@@ -123,15 +101,3 @@ def serialize_orders(
         result.append(temp)
     return result
     
-
-def validate_user_for_order_cancel(
-        user: User,
-        order: Order
-) -> None:
-    if order.user_id != user.id and user.role != AuthRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only owner or admin can cancel order")
-    if order.status in [OrderStatus.CANCELLED, OrderStatus.EXECUTED]:
-        raise HTTPException(status_code=400, detail=f"Order is already {order.status.value}")
-    if order.order_type == Order_Type.MARKET:
-        raise HTTPException(status_code=400, detail="Market order cant be cancelled")
-

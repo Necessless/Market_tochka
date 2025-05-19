@@ -1,15 +1,16 @@
 from typing import Optional
 from pydantic import BaseModel, Field
-from order_service.models.orders import Direction, OrderStatus
+from models.orders import Direction, OrderStatus
 import uuid
 import datetime
-from core.schemas.Responses import Ok
+
 
 class Order_Body_POST(BaseModel):
     direction: Direction
     ticker: str
-    qty: int = Field(ge=1)
-    price: Optional[int] = Field(default=None, gt=0)
+    qty: int 
+    user_id: uuid.UUID
+    price: Optional[int] 
 
 
 class Market_Order_Body_GET(BaseModel):
@@ -32,6 +33,20 @@ class Limit_Order_GET(Market_Order_GET):
     filled: int
     body: Limit_Order_Body_GET
 
+class Ok(BaseModel):
+    success: bool = True
 
 class Create_Order_Response(Ok):
     order_id: uuid.UUID
+
+class Validate_Balance(BaseModel):
+    ticker: str
+    user_id: uuid.UUID
+    amount: int
+    freeze_balance: bool
+
+class Balance(BaseModel):
+    user_id: uuid.UUID
+    instrument_ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
+    available: int 
+    reserved: int

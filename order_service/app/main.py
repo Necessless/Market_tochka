@@ -1,17 +1,28 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import uvicorn
-from core.config import settings
+import time
+from config import settings
 from api.router import router 
-from core.database import db_helper
-
+from database import db_helper
+import asyncio
+from consumers.order_consumer import start_consumer as start_orders_consumer
+from consumers.user_delete_consumer import start_consumer as start_users_consumer
+from consumers.instrument_delete_consumer import start_consumer as start_instrument_consumer
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     #app startup
+    await connect_with_rabbit()
     yield #back to work cycle
     #app shutdown
     await db_helper.dispose()
 
+
+async def connect_with_rabbit():
+    time.sleep(7)
+    await asyncio.create_task(start_orders_consumer())
+    await asyncio.create_task(start_users_consumer())
+    await asyncio.create_task(start_instrument_consumer())
 
 main_app = FastAPI(lifespan=lifespan)
 

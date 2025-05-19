@@ -11,5 +11,5 @@ class AuthRole(Enum):
 class User(Base):
     __tablename__ = "Users"
 
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str] = mapped_column()
     role: Mapped[AuthRole] = mapped_column()
