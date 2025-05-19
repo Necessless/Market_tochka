@@ -22,6 +22,8 @@ class ApiPrefix(BaseModel):
     admin: str = "/admin"
     order: str ="/order"
 
+class RabbitMq(BaseModel):
+    url: str 
 
 class DatabaseConfig(BaseModel):
     url: PostgresDsn
@@ -48,6 +50,6 @@ class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     api: ApiPrefix = ApiPrefix()
     db: DatabaseConfig
-
+    rabbitmq: RabbitMq
 
 settings = Settings()

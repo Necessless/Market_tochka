@@ -61,6 +61,15 @@ async def create_order(
                 json=data.model_dump(mode="json"),
                 timeout=5.0
             )
+            response.raise_for_status()
+        elif order.direction == Direction.BUY and not order.price:
+            data = Validate_Balance(ticker = "RUB", user_id=order.user_id, amount = order.quantity, freeze_balance=False)
+            response = await client.post(
+                url=f"{settings.urls.balances}/v1/balance/validate_balance",
+                json=data.model_dump(mode="json"),
+                timeout=5.0
+            )
+            response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
     except httpx.HTTPStatusError as e:

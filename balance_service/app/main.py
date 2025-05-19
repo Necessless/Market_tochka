@@ -6,7 +6,10 @@ from models import Instrument
 from config import settings
 from api.router import router 
 from database import db_helper
-
+from consumers.user_delete_consumer import start_consumer as start_user_consumer
+from consumers.instrument_delete_consumer import start_consumer as start_instrument_consumer
+import time
+import asyncio
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     #app startup
@@ -17,10 +20,16 @@ async def lifespan(app: FastAPI):
             rub_ticker = Instrument(ticker="RUB", name="Ruble")
             session.add(rub_ticker)
             await session.commit()
-    yield #back to work cycle
+    await connect_with_rabbit()
+    yield  #back to work cycle
     #app shutdown
     await db_helper.dispose()
 
+
+async def connect_with_rabbit():
+    time.sleep(7)
+    await asyncio.create_task(start_user_consumer())
+    await asyncio.create_task(start_instrument_consumer())
 
 main_app = FastAPI(lifespan=lifespan)
 

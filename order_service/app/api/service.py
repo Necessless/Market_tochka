@@ -1,5 +1,5 @@
 from typing import List
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from .schemas import Order_Body_POST, Ok, Market_Order_GET, Limit_Order_GET, Validate_Balance, Balance
 import uuid
 from models.orders import Order_Type, OrderStatus, Order,Direction
@@ -27,14 +27,13 @@ async def handle_order_creation(
                 print("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
                 if order_info.price:
                     orders_for_transaction = await find_orders_for_limit_transaction(order_info, session)
-                    if not orders_for_transaction:
-                        return
-                    else:
+                    if orders_for_transaction:
                         await make_limit_transactions(order_info, orders_for_transaction, session=session, client=client)
                 else:
                     orders_for_transaction = await find_orders_for_market_transaction(order_info, session)#3
-                    if not orders_for_transaction or sum([order.amount for order in orders_for_transaction]) < order_info.quantity:
+                    if not orders_for_transaction or sum([order.quantity for order in orders_for_transaction]) < order_info.quantity:
                         order_info.status = OrderStatus.CANCELLED
+                        session.add(order_info)
                     else:
                         await make_market_transactions(order_info, orders_for_transaction,session=session,client=client)#4,5
                 await session.commit()
@@ -266,3 +265,22 @@ async def service_retrieve_order(
 #         bid_levels=res_bid,
 #         ask_levels=res_ask
 #     )
+async def handle_user_delete(user_id: uuid.UUID):
+    print(user_id)
+    async with db_helper.async_session_factory() as session:
+        query = select(Order).where(Order.user_id == user_id, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]))
+        orders = await session.scalars(query)
+        for order in orders.all():
+            order.status = OrderStatus.CANCELLED
+            session.add(order)
+        await session.commit()
+
+
+async def handle_ticker_delete(ticker: str):
+    async with db_helper.async_session_factory() as session:
+        query = select(Order).where(Order.instrument_ticker == ticker, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]))
+        orders = await session.scalars(query)
+        for order in orders.all():
+            order.status = OrderStatus.CANCELLED
+            session.add(order)
+        await session.commit()

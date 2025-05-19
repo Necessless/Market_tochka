@@ -65,12 +65,12 @@ async def validate_and_freeze_balance_for_operation(
     data: Validate_Balance,
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    print("ASDADAD")
+
     query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id)
     result = await session.scalar(query)
     if not result or result.available < data.amount:
         raise HTTPException(status_code=409, detail = "Insufficient ammount of funds on balance")
-    print(data.freeze_balance)
+
     if data.freeze_balance == True:
         result.available_to_reserved(data.amount)
         session.add(result)
@@ -144,7 +144,16 @@ async def balance_withdraw(
     await session.commit()
     return Ok()
 
-
+@router.post("/admin/balance/init", tags=["balance"])
+async def init_balance_for_user(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(db_helper.session_getter),
+):
+    print(user_id)
+    balance = Balance(user_id=user_id, instrument_ticker="RUB")
+    session.add(balance)
+    await session.commit()
+    return Ok()
 
 @router.get("/public/instrument", response_model=Sequence[Instrument_Base])
 async def get_all_instruments(
