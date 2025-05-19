@@ -12,10 +12,11 @@ router = APIRouter(prefix=settings.api.v1.prefix)
 async def list_instruments(client: httpx.AsyncClient = Depends(httpx_helper.client_getter)):
     try:
         response = await client.get(f"{settings.urls.balances}/v1/public/instrument", timeout=5.0)
+        response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
     except httpx.HTTPStatusError as e:
-        raise HTTPException(e)
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
     return response.json()
 
 
@@ -33,8 +34,11 @@ async def create_instrument(
             f"{settings.urls.balances}/v1/admin/instrument", 
             json=data.model_dump(),
             timeout=5.0)
+        response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис баланса временно недоступен")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
     return response.json()
 
 @router.delete("/admin/instrument/{ticker}", tags=['admin'])
@@ -89,6 +93,7 @@ async def deposit_to_balance(
         is_user = await client.get(
         f"{settings.urls.users}/v1/user/{user_id}",
         timeout=5.0)
+        print("SADAD")
         is_user.raise_for_status()
         response = await client.post(
             f"{settings.urls.balances}/v1/admin/balance/deposit",

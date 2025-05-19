@@ -10,18 +10,19 @@ from models import Instrument, Balance, Transaction
 
 
 
-async def get_balance_for_user_by_ticker(
-        user_name: str,
-        ticker: str,
-        session: AsyncSession
-) -> Balance | None:
-    query = (
-        select(Balance)
-        .filter(Balance.user_name == user_name, Balance.instrument_ticker == ticker)
-    )
-    result = await session.execute(query)
-    balance = result.scalar_one_or_none()
-    return balance
+# async def get_balance_for_user_by_ticker(
+#         user_id: uuid.UUID,
+#         ticker: str,
+#         session: AsyncSession
+# ) -> Balance | None:
+#     query = (
+#         select(Balance)
+#         .filter(Balance.user_id == user_id, Balance.instrument_ticker == ticker)
+#     )
+#     result = await session.scalar(query)
+#     if not result:
+#         raise HTTPException()
+#     return balance
 
 
 # async def validate_and_return_limit_balance(
@@ -122,22 +123,7 @@ async def get_balance_for_user_by_ticker(
 #     return balance
 
 
-async def create_transaction(
-        instrument_ticker: str,
-        amount: int,
-        price: int,
-        session: AsyncSession
-) -> None:
-    transaction = Transaction(
-        instrument_ticker=instrument_ticker, 
-        amount=amount,
-        price=price,
-    )
-    if transaction:
-        session.add(transaction)
-    else:
-        raise HTTPException(status_code=400, detail="Cannot create transaction with this ticker, price and amount")
-    
+
     
 # async def check_balance_for_market_buy(
 #         balance: int,
@@ -247,16 +233,6 @@ async def get_balance_for_user(
         session: AsyncSession,
         id: uuid.UUID
 ) -> Dict[str, int]:
-    # query = text("""WITH balance AS (SELECT available, reserved, instrument_ticker
-    #     FROM public.users_balance
-    #     WHERE user_name = :name
-    #     ),
-    #     instrument AS (SELECT ticker FROM public.instruments)
-    #     SELECT instrument.ticker, COALESCE(balance.available,0), COALESCE(balance.reserved,0)
-    #     FROM balance
-    #     RIGHT JOIN instrument
-    #     ON instrument.ticker = balance.instrument_ticker;
-    # """) raw sql запрос на всякий случай
     statement_balance = select(Balance).filter(Balance.user_id == id)
     statement_instrument = select(Instrument)
     statement_balance = statement_balance.cte('balance')

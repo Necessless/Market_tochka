@@ -43,14 +43,22 @@ class Balance(Base):
     def reserved(self, value):
         self._reserved = value
 
-    def add_reserved(self, value):
+    def available_to_reserved(self, value):
         if value > self._available:
             raise ValueError("Not enough quantity on balance to reserve this amount")
+        print(f"резервируем:{value}")
         self._available -= value
         self._reserved += value
 
-    def remove_reserved(self, value):
+    def reserved_to_available(self, value):
         if value > self._reserved:
             raise ValueError("Not enough quantity reserved on balance to unreserve this amount")
         self._available += value
+        self._reserved -= value
+
+    def remove_from_reserved(self, value):
+        print(f"возвращаем:{value}")
+        if value > self._reserved:
+            raise ValueError("Not enough quantity reserved on balance to sell this amount")
+        
         self._reserved -= value

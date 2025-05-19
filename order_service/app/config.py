@@ -1,5 +1,9 @@
 from pydantic import BaseModel, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class RunConfig(BaseModel):
@@ -12,7 +16,7 @@ class ApiV1Prefix(BaseModel):
     
 
 class ApiPrefix(BaseModel):
-    prefix: str = "/api"
+    prefix: str = "/internal/api"
     v1: ApiV1Prefix = ApiV1Prefix()
     public: str = "/public"
     admin: str = "/admin"
@@ -34,9 +38,16 @@ class DatabaseConfig(BaseModel):
         }
 
 
+class ApiURLS(BaseModel):
+    users: str 
+    balances: str
+
+class RabbitMq(BaseModel):
+    url: str 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=BASE_DIR / ".env",
         case_sensitive=False, 
         env_nested_delimiter="__",
         env_prefix="MAIN_CONFIG__"
@@ -44,6 +55,7 @@ class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     api: ApiPrefix = ApiPrefix()
     db: DatabaseConfig
-
+    urls: ApiURLS
+    rabbitmq: RabbitMq
 
 settings = Settings()

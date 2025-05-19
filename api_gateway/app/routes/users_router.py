@@ -16,8 +16,11 @@ async def register_user(data: NewUser, client: httpx.AsyncClient = Depends(httpx
             json=data.model_dump(mode="json"),
             timeout=5.0
         )
+        response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис Пользователей временно недоступен")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
     return response.json()
 
 
@@ -37,6 +40,9 @@ async def delete_user(
             f"{settings.urls.users}/v1/admin/user/{user_id}",
             timeout=5.0
         )
+        response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис Пользователей временно недоступен")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
     return response.json()

@@ -15,6 +15,21 @@ services:
       - ./api_gateway/.env 
     volumes:
       - ./api_gateway/app:/backend/app
+
+  rabbitmq:
+    image: rabbitmq:4.1.0-management
+    ports:
+      - "5672:5672"     
+      - "15672:15672"    
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    networks:
+      - app-network
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+
   user_service:
     build:
       context: ./user_service
@@ -44,6 +59,22 @@ services:
     restart: always
     volumes:
       - ./balance_service/app:/backend/app
+  order_service:
+    build:
+      context: ./order_service
+    depends_on:
+      - order_db
+      - rabbitmq
+    ports:
+      - "8003:8000"  
+    networks:
+      - app-network
+    env_file:
+      - ./order_service/.env  
+    restart: always
+    volumes:
+      - ./order_service/app:/backend/app
+    
 
   user_db:
     image: postgres:17
@@ -58,7 +89,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB_USERS}
     ports:
     - "5433:5432"
-
+  
   balance_db:
     image: postgres:17
     volumes:
@@ -72,10 +103,24 @@ services:
       POSTGRES_DB: ${POSTGRES_DB_BALANCES}
     ports:
     - "5434:5432"
-
+  order_db:
+    image: postgres:17
+    volumes:
+      - order_pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_ORDERS}
+    ports:
+    - "5435:5432"
 volumes:
   user_pg_data:
   balance_pg_data:
+  order_pg_data:
+  rabbitmq_data:
 
 networks:
   app-network:

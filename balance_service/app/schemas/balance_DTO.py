@@ -10,3 +10,14 @@ class Deposit_Withdraw_Instrument_V1(BaseModel):
 class Instrument_Base(BaseModel):
     name: str = Field()
     ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
+
+class Validate_Balance(BaseModel):
+    ticker: str
+    user_id: uuid.UUID
+    amount: int
+    freeze_balance: bool
+
+class Transaction_Post(BaseModel):
+    instrument_ticker: str
+    amount: int
+    price: int
