@@ -32,8 +32,10 @@ async def handle_order_creation(
                 else:
                     orders_for_transaction = await find_orders_for_market_transaction(order_info, session)#3
                     if not orders_for_transaction or sum([order.quantity for order in orders_for_transaction]) < order_info.quantity:
+                        print("Cancelling market order")
                         order_info.status = OrderStatus.CANCELLED
-                        session.add(order_info)
+                        print(order_info.id)
+                        await session.merge(order_info)
                     else:
                         await make_market_transactions(order_info, orders_for_transaction,session=session,client=client)#4,5
     
@@ -145,7 +147,7 @@ async def make_limit_transactions(
     if quantity == 0:
         order.status = OrderStatus.EXECUTED
         order.filled = 1
-    session.add(order)
+    await session.merge(order)
 
 
 async def make_market_transactions(
@@ -157,12 +159,13 @@ async def make_market_transactions(
     quantity = order.quantity
     print("TRAAAANS")
     balance_rub = await get_balance_by_ticker(ticker="RUB", user_id=order.user_id, client=client)
+    print(balance_rub)
     i = 0
     while quantity != 0 and i != len(orders_for_transaction):
         curr_order = orders_for_transaction[i]
         amount_to_order = min(quantity, curr_order.quantity)
         if order.direction == Direction.BUY:
-            if not check_balance_for_market_buy(balance_rub.available, curr_order.price, amount_to_order):
+            if not check_balance_for_market_buy(balance_rub['_available'], curr_order.price, amount_to_order):
                 order.status = OrderStatus.CANCELLED
                 session.add(order)
                 return 
@@ -187,7 +190,7 @@ async def make_market_transactions(
     order.quantity = quantity
     order.status = OrderStatus.EXECUTED
     order.filled = 1 
-    session.add(order)
+    await session.merge(order)
 
 async def service_retrieve_order(
         order_id: uuid.UUID,

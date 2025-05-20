@@ -234,6 +234,7 @@ async def get_balance_for_user(
         session: AsyncSession,
         id: uuid.UUID
 ) -> Dict[str, int]:
+    print(id)
     statement_balance = select(Balance).filter(Balance.user_id == id)
     statement_instrument = select(Instrument)
     statement_balance = statement_balance.cte('balance')
@@ -245,6 +246,7 @@ async def get_balance_for_user(
     )
     result = await session.execute(statement)
     balances = result.all()
+    print(balances)
     if not result:
         raise HTTPException(status_code=404, detail="User is not exists")
     return {ticker: available + reserved for ticker, available, reserved in balances}

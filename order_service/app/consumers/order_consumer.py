@@ -10,6 +10,7 @@ async def on_message(message: IncomingMessage):
     async with message.process():
         try:
             data = json.loads(message.body)
+            print(data)
             order = Order(**data)
             await handle_order_creation(order)
         except Exception as e:

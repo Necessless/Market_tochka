@@ -40,6 +40,7 @@ class Order(Base):
 
     def as_dict(self):
         result = {
+            "id": str(self.id),
             "status": self.status.value,
             "user_id": str(self.user_id),
             "direction": self.direction.value,
