@@ -186,7 +186,7 @@ async def create_transaction(
             price=data.price,
         )
         session.add(transaction)
-        await session.commit()
     except Exception:
         raise HTTPException(status_code=400, detail="Cannot create transaction with this ticker, price and amount")
+    await session.commit()
     

@@ -36,7 +36,6 @@ async def handle_order_creation(
                         session.add(order_info)
                     else:
                         await make_market_transactions(order_info, orders_for_transaction,session=session,client=client)#4,5
-                await session.commit()
     
 async def get_balance_by_ticker(
         user_id: uuid.UUID,
@@ -60,7 +59,7 @@ def check_balance_for_market_buy(balance:int, price: int, amount:int):
 async def create_transaction_request(ticker:str, amount: int, price: int, client: httpx.AsyncClient):
     try:
         data = {"instrument_ticker": ticker, "amount": amount, "price": price}
-        response = await client.post(url=f"{settings.urls.balances}/v1/transaction", data=data, timeout=5.0)
+        response = await client.post(url=f"{settings.urls.balances}/v1/transaction", json=data, timeout=5.0)
         response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
@@ -141,6 +140,7 @@ async def make_limit_transactions(
         i += 1
         session.add(curr_order)
     print("NO")
+    order.quantity = quantity
     order.status = OrderStatus.PARTIALLY_EXECUTED
     if quantity == 0:
         order.status = OrderStatus.EXECUTED
@@ -184,6 +184,7 @@ async def make_market_transactions(
             curr_order.status = OrderStatus.EXECUTED
         i += 1
         session.add(curr_order)
+    order.quantity = quantity
     order.status = OrderStatus.EXECUTED
     order.filled = 1 
     session.add(order)

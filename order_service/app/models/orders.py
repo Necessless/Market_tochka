@@ -42,7 +42,6 @@ class Order(Base):
         result = {
             "status": self.status.value,
             "user_id": str(self.user_id),
-            "timestamp": str(self.timestamp),
             "direction": self.direction.value,
             "instrument_ticker": self.instrument_ticker,
             "quantity": self.quantity,
