@@ -43,7 +43,7 @@ class Validate_Balance(BaseModel):
     ticker: str
     user_id: uuid.UUID
     amount: int
-    freeze_balance: bool
+    freeze_balance: Optional[bool] = Field(default=False)
 
 class Balance(BaseModel):
     user_id: uuid.UUID

@@ -54,22 +54,31 @@ async def create_order(
                 timeout=5.0
             )
             response.raise_for_status()
-        elif order.direction == Direction.BUY and order.price:
-            data = Validate_Balance(ticker = "RUB", user_id=order.user_id, amount = order.quantity*order.price, freeze_balance=True)
-            response = await client.post(
-                url=f"{settings.urls.balances}/v1/balance/validate_balance",
-                json=data.model_dump(mode="json"),
+        elif order.direction == Direction.BUY:
+            data_tick= {"ticker": order.instrument_ticker}
+            response_tick = await client.post(
+                url=f"{settings.urls.balances}/v1/admin/check-instrument",
+                params=data_tick,
                 timeout=5.0
             )
-            response.raise_for_status()
-        elif order.direction == Direction.BUY and not order.price:
-            data = Validate_Balance(ticker = "RUB", user_id=order.user_id, amount = order.quantity, freeze_balance=False)
-            response = await client.post(
-                url=f"{settings.urls.balances}/v1/balance/validate_balance",
-                json=data.model_dump(mode="json"),
-                timeout=5.0
-            )
-            response.raise_for_status()
+            response_tick.raise_for_status()
+            if order.order_type == Order_Type.LIMIT:
+                data = Validate_Balance(ticker = "RUB", user_id=order.user_id, amount = order.quantity*order.price, freeze_balance=True)
+                response = await client.post(
+                    url=f"{settings.urls.balances}/v1/balance/validate_balance",
+                    json=data.model_dump(mode="json"),
+                    timeout=5.0
+                )
+                order.reserved_value =  order.quantity*order.price
+                response.raise_for_status()
+            else:
+                data = Validate_Balance(ticker = "RUB", user_id=order.user_id, amount = order.quantity, freeze_balance=False)
+                response = await client.post(
+                    url=f"{settings.urls.balances}/v1/balance/validate_balance",
+                    json=data.model_dump(mode="json"),
+                    timeout=5.0
+                )
+                response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
     except httpx.HTTPStatusError as e:

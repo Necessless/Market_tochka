@@ -123,6 +123,13 @@ async def make_limit_transactions(
         curr_order = orders_for_transaction[i]
         amount_to_order = min(quantity, curr_order.quantity)
         print("YES")
+        price = curr_order.price
+        if (direction == Direction.SELL and order.price < curr_order.price):
+            price = order.price
+            curr_order.reserved_value -= price * amount_to_order
+        if  (direction == Direction.BUY and order.price > curr_order.price):
+            price = curr_order.price
+            order.reserved_value -= price * amount_to_order
         await add_remove_balance(
             direction=direction,
             seller_id=curr_order.user_id if direction == Direction.BUY else order.user_id,
@@ -130,7 +137,7 @@ async def make_limit_transactions(
             order_ticker = order.instrument_ticker,
             order_type = order.order_type,
             amount=amount_to_order, 
-            price=curr_order.price,
+            price=price,
             client=client
         )
         quantity -= amount_to_order
@@ -139,6 +146,8 @@ async def make_limit_transactions(
         if curr_order.quantity == 0:
             curr_order.filled = 1
             curr_order.status = OrderStatus.EXECUTED
+            if curr_order.reserved_value and curr_order.reserved_value > 0:
+                await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
         i += 1
         session.add(curr_order)
     print("NO")
@@ -147,6 +156,8 @@ async def make_limit_transactions(
     if quantity == 0:
         order.status = OrderStatus.EXECUTED
         order.filled = 1
+        if curr_order.reserved_value and order.reserved_value > 0:
+            await return_to_balance(order.reserved_value, user_id=order.user_id, ticker="RUB")
     await session.merge(order)
 
 
@@ -167,8 +178,7 @@ async def make_market_transactions(
         if order.direction == Direction.BUY:
             if not check_balance_for_market_buy(balance_rub['_available'], curr_order.price, amount_to_order):
                 order.status = OrderStatus.CANCELLED
-                session.add(order)
-                return 
+                break 
         await add_remove_balance(
             direction=order.direction,
             seller_id=curr_order.user_id if order.direction == Direction.BUY else order.user_id,
@@ -180,17 +190,21 @@ async def make_market_transactions(
             client=client
         )
         quantity -= amount_to_order
+        curr_order.reserved_value -= curr_order.price * amount_to_order
         curr_order.quantity -= amount_to_order
         curr_order.status = OrderStatus.PARTIALLY_EXECUTED
         if curr_order.quantity == 0:
             curr_order.filled = 1
             curr_order.status = OrderStatus.EXECUTED
+            if curr_order.reserved_value and curr_order.reserved_value > 0:
+                await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
         i += 1
         session.add(curr_order)
     order.quantity = quantity
     order.status = OrderStatus.EXECUTED
     order.filled = 1 
     await session.merge(order)
+
 
 async def service_retrieve_order(
         order_id: uuid.UUID,
@@ -204,6 +218,16 @@ async def service_retrieve_order(
     return order
 
 
+async def return_to_balance(amount: int, user_id: uuid.UUID, ticker: str):
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            data = Validate_Balance(ticker=ticker, user_id=user_id, amount=amount)
+            response = await client.post(url=f"{settings.urls.balances}/v1/balance/return_balance", json=data.model_dump(mode="json"))
+            response.raise_for_status()
+        except httpx.RequestError:
+            raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен, не удалось вернуть остаток на счёт")
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Возникла ошибка в сервисе"))
 # async def service_cancel_order(
 #     user_name: str,
 #     order_id: uuid.UUID,

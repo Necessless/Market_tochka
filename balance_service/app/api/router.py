@@ -13,6 +13,7 @@ from .service import (
     get_instrument_by_ticker,
     get_balance_for_user
 )
+from sqlalchemy import exc
 
 router = APIRouter(tags=["admin"], prefix=settings.api.v1.prefix)
 
@@ -22,13 +23,28 @@ async def add_instrument(
     data: Instrument_Base,
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    instrument = Instrument(name=data.name, ticker=data.ticker)
-    session.add(instrument)
-    await session.commit()
+    async with session.begin():
+        try:
+            instrument = Instrument(name=data.name, ticker=data.ticker)
+            session.add(instrument)
+        except exc.IntegrityError:
+            raise HTTPException(status_code=409, detail="This ticker already exists")
     return Instrument_Base(
         name=instrument.name,
         ticker=instrument.ticker
     )
+
+@router.post("/admin/check-instrument")
+async def check_instrument_existance(
+    ticker: str,
+    session: AsyncSession = Depends(db_helper.session_getter),
+):
+    print(ticker)
+    query = select(Instrument).filter(Instrument.ticker == ticker)
+    result = await session.scalar(query)
+    print(result)
+    if not result:
+        raise HTTPException(status_code=404, detail="This ticker is not exists")
     
 
 
