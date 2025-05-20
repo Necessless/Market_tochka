@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from models.orders import Direction, OrderStatus
 import uuid
@@ -50,3 +50,17 @@ class Balance(BaseModel):
     instrument_ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
     available: int 
     reserved: int
+
+class L2OrderBook(BaseModel):
+    price: int = Field(ge=0)
+    qty: int = Field(ge=0)
+
+class OrderBook(BaseModel):
+    bid_levels: List[L2OrderBook]
+    ask_levels: List[L2OrderBook]
+
+
+class Order_Cancel(BaseModel):
+    req_id: uuid.UUID
+    order_id: uuid.UUID
+    role: str

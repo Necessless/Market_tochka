@@ -1,14 +1,17 @@
+import uuid
 from sqlalchemy import select
-from fastapi import APIRouter, Depends, HTTPException
-from .schemas import Order_Body_POST, Create_Order_Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from .schemas import Ok, Order_Body_POST, Order_Cancel
 from models import Order
-from models.orders import Order_Type, Direction
+from models.orders import Order_Type, Direction, OrderStatus
 from .schemas import Validate_Balance
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import db_helper
 from .dependencies import serialize_orders
 from .service import (
     service_retrieve_order,
+    service_get_orderbook,
+    return_to_balance
 )
 import httpx 
 from httpx_helper import httpx_helper
@@ -18,11 +21,12 @@ from config import settings
 router = APIRouter(tags=["order"], prefix=settings.api.v1.prefix)
 
 
-@router.get("/order")
+@router.get("/order/{user_id}")
 async def get_list_of_orders(
+    user_id: uuid.UUID,
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
-    query = select(Order).order_by(Order.timestamp)
+    query = select(Order).filter(Order.user_id == user_id).order_by(Order.timestamp)
     result = await session.scalars(query)
     orders = result.all()
     serialized_orders = serialize_orders(orders)
@@ -90,25 +94,48 @@ async def create_order(
     return {"success": True, "order_id": order.id}
     
 
-
-# @router.get("/{order_id}")
-# async def retrieve_order(
-#     order_id: uuid.UUID,
-#     authorization: str = Depends(api_key_header),
-#     session: AsyncSession = Depends(db_helper.session_getter)
-# ):
-#     order = await service_retrieve_order(order_id=order_id, session=session)
-#     serialized_order = serialize_orders([order])[0]
-#     return serialized_order
+@router.get("/public/orderbook/{ticker}")
+async def get_orderbook(ticker: str, limit: int = Query(default=10), session: AsyncSession = Depends(db_helper.session_getter)):
+    result = await service_get_orderbook(ticker, limit, session)
+    return result
 
 
-# @router.delete("/{order_id}", response_model=Ok)
-# async def cancel_order(
-#     order_id: uuid.UUID,
-#     session: AsyncSession = Depends(db_helper.session_getter)
-# ):
-#     result = await service_cancel_order(user_name=user_name, order_id=order_id, session=session)
-#     await session.commit()
-#     return result
+
+
+
+@router.get("/order/retrieve/{order_id}")
+async def retrieve_order(
+    order_id: uuid.UUID,
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    order = await service_retrieve_order(order_id=order_id, session=session)
+    serialized_order = serialize_orders([order])[0]
+    return serialized_order
+
+
+@router.post("/order/cancel", response_model=Ok)
+async def cancel_order(
+    data: Order_Cancel,
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    query = select(Order).filter(Order.id == data.order_id)
+    order = await session.scalar(query)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order with this id is not found")
+    if order.status in [OrderStatus.EXECUTED, OrderStatus.CANCELLED]:
+        raise HTTPException(status_code=409, detail="This order is already cancelled or executed")
+    if order.user_id == data.req_id or data.role == "ADMIN":
+        order.status = OrderStatus.CANCELLED
+        if order.order_type == Order_Type.LIMIT:
+            if order.direction == Direction.BUY:
+                value_to_return = order.quantity * order.price
+                ticker = "RUB"
+            else:
+                value_to_return = order.quantity
+                ticker = order.instrument_ticker
+            await return_to_balance(value_to_return, order.user_id, ticker)
+    session.add(order)
+    await session.commit()
+    return Ok()
     
 

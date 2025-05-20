@@ -180,7 +180,7 @@ async def get_all_instruments(
     return result.all()
 
 
-@router.get("/transactions/{ticker}")
+@router.get("/public/transactions/{ticker}")
 async def get_transactions_history(
     ticker: str,
     limit: int = Query(default=10),

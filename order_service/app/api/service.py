@@ -1,6 +1,6 @@
 from typing import List
-from sqlalchemy import delete, select
-from .schemas import Order_Body_POST, Ok, Market_Order_GET, Limit_Order_GET, Validate_Balance, Balance
+from sqlalchemy import func, select
+from .schemas import  Validate_Balance, L2OrderBook, OrderBook
 import uuid
 from models.orders import Order_Type, OrderStatus, Order,Direction
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,7 @@ from database import db_helper
 from config import settings
 import httpx 
 from fastapi import HTTPException
+
 
 async def handle_order_creation(
         order_info: Order,
@@ -228,71 +229,52 @@ async def return_to_balance(amount: int, user_id: uuid.UUID, ticker: str):
             raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен, не удалось вернуть остаток на счёт")
         except httpx.HTTPStatusError as e:
             raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Возникла ошибка в сервисе"))
-# async def service_cancel_order(
-#     user_name: str,
-#     order_id: uuid.UUID,
-#     session: AsyncSession
-# ) -> Ok:
-#     user = await get_user(session=session, name=user_name)
-#     order = await service_retrieve_order(order_id=order_id, session=session)
-#     validate_user_for_order_cancel(user, order)
-#     balance_instr = await get_balance_for_user_by_ticker(user_name=user_name, ticker=order.instrument_ticker, session=session)
-#     balance_rub = await get_balance_for_user_by_ticker(user_name=user_name, ticker="RUB", session=session)
-#     order.status = OrderStatus.CANCELLED
-#     session.add(order)
-#     await add_remove_balance(
-#         balance_instr=balance_instr,
-#         balance_rub=balance_rub,
-#         order=order,
-#         amount=order.quantity,
-#         price=order.price,
-#         session=session
-#     )
-#     return Ok()
 
 
-# async def service_get_orderbook(
-#         ticker: str,
-#         limit: int,
-#         session: AsyncSession
-# ) -> OrderBook:
-#     query_ask = (
-#         select(func.sum(Order.quantity), Order.price)
-#         .filter(
-#             Order.instrument_ticker == ticker,
-#             Order.direction == Direction.BUY,
-#             Order.order_type == Order_Type.LIMIT,
-#             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
-#         )
-#         .group_by(Order.price)
-#         .order_by(Order.price.desc())
-#         .limit(limit)
-#     )
-#     query_bid = (
-#         select(func.sum(Order.quantity), Order.price)
-#         .filter(
-#             Order.instrument_ticker == ticker,
-#             Order.direction == Direction.SELL,
-#             Order.order_type == Order_Type.LIMIT,
-#             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
-#         )
-#         .group_by(Order.price)
-#         .order_by(Order.price.asc())
-#         .limit(limit)
-#     )
-#     res_ask = await session.execute(query_ask)
-#     res_bid = await session.execute(query_bid)
+async def service_get_orderbook(
+        ticker: str,
+        limit: int,
+        session: AsyncSession
+) -> OrderBook:
+    query_ask = (
+        select(func.sum(Order.quantity), Order.price)
+        .filter(
+            Order.instrument_ticker == ticker,
+            Order.direction == Direction.BUY,
+            Order.order_type == Order_Type.LIMIT,
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.desc())
+        .limit(limit)
+    )
+    query_bid = (
+        select(func.sum(Order.quantity), Order.price)
+        .filter(
+            Order.instrument_ticker == ticker,
+            Order.direction == Direction.SELL,
+            Order.order_type == Order_Type.LIMIT,
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.asc())
+        .limit(limit)
+    )
+    res_ask = await session.execute(query_ask)
+    res_bid = await session.execute(query_bid)
 
-#     res_ask = res_ask.all()
-#     res_bid = res_bid.all()
+    res_ask = res_ask.all()
+    res_bid = res_bid.all()
     
-#     res_ask = [L2OrderBook(price=price, qty=qty) for qty, price in res_ask]
-#     res_bid = [L2OrderBook(price=price, qty=qty) for qty, price in res_bid]
+    res_ask = [L2OrderBook(price=price, qty=qty) for qty, price in res_ask]
+    res_bid = [L2OrderBook(price=price, qty=qty) for qty, price in res_bid]
 
-#     return OrderBook(
-#         bid_levels=res_bid,
-#         ask_levels=res_ask
-#     )
+    return OrderBook(
+        bid_levels=res_bid,
+        ask_levels=res_ask
+    )
+
+
 async def handle_user_delete(user_id: uuid.UUID):
     print(user_id)
     async with db_helper.async_session_factory() as session:
