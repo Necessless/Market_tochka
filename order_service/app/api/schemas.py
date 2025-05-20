@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from models.orders import Direction, OrderStatus
 import uuid
@@ -43,10 +43,24 @@ class Validate_Balance(BaseModel):
     ticker: str
     user_id: uuid.UUID
     amount: int
-    freeze_balance: bool
+    freeze_balance: Optional[bool] = Field(default=False)
 
 class Balance(BaseModel):
     user_id: uuid.UUID
     instrument_ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
     available: int 
     reserved: int
+
+class L2OrderBook(BaseModel):
+    price: int = Field(ge=0)
+    qty: int = Field(ge=0)
+
+class OrderBook(BaseModel):
+    bid_levels: List[L2OrderBook]
+    ask_levels: List[L2OrderBook]
+
+
+class Order_Cancel(BaseModel):
+    req_id: uuid.UUID
+    order_id: uuid.UUID
+    role: str

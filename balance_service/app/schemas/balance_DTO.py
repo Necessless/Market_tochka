@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 import uuid
 
@@ -15,7 +16,7 @@ class Validate_Balance(BaseModel):
     ticker: str
     user_id: uuid.UUID
     amount: int
-    freeze_balance: bool
+    freeze_balance: Optional[bool] = Field(default=False)
 
 class Transaction_Post(BaseModel):
     instrument_ticker: str

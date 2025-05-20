@@ -13,14 +13,6 @@ class Balance_one_instrument(BaseModel):
     reserved: int
 
 
-class L2OrderBook(BaseModel):
-    price: int = Field(ge=0)
-    qty: int = Field(ge=0)
-
-class OrderBook(BaseModel):
-    bid_levels: List[L2OrderBook]
-    ask_levels: List[L2OrderBook]
-
 
 
 class UserBase(BaseModel):

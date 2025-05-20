@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 import httpx
 from auth_check import api_key_header
 from config import settings
@@ -126,6 +126,18 @@ async def withdraw_from_balance(
         response.raise_for_status()
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис баланса временно недоступен")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
+    return response.json()
+
+@router.get("/public/transactions/{ticker}", tags=['public'])
+async def get_transactions_for_ticker(ticker: str, limit: int = Query(default=10), client: httpx.AsyncClient = Depends(httpx_helper.client_getter)):
+    try:
+        data = {"limit": limit}
+        response = await client.get(url=f"{settings.urls.balances}/v1/public/transactions/{ticker}", params=data, timeout=5.0)
+        response.raise_for_status()
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="Сервис Ордеров временно недоступен")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
     return response.json()

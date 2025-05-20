@@ -6,7 +6,6 @@ RABBITMQ_URL = settings.rabbitmq.url
 
 
 async def publish_order(order_data: Order):
-    print(order_data)
     connection = await aio_pika.connect_robust(RABBITMQ_URL)
     
     async with connection:

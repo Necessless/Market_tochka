@@ -37,17 +37,19 @@ class Order(Base):
     price: Mapped[int] = mapped_column(nullable=True)
     filled: Mapped[int] = mapped_column(default=0)
     order_type: Mapped[Order_Type] 
+    reserved_value: Mapped[int] = mapped_column(default=0)
 
     def as_dict(self):
         result = {
+            "id": str(self.id),
             "status": self.status.value,
             "user_id": str(self.user_id),
-            "timestamp": str(self.timestamp),
             "direction": self.direction.value,
             "instrument_ticker": self.instrument_ticker,
             "quantity": self.quantity,
             "price": self.price,
             "filled": self.filled,
-            "order_type": self.order_type.value
+            "order_type": self.order_type.value,
+            "reserved_value": self.reserved_value
         }
         return result
