@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from models.Users import AuthRole
 from typing import List
 import uuid
@@ -6,7 +6,6 @@ import uuid
 class NewUser(BaseModel):
     name: str = Field(min_length=3, max_length=50)
     role: AuthRole = Field(default=AuthRole.USER)
-
 
 class Balance_one_instrument(BaseModel):
     available: int 

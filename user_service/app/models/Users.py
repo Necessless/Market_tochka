@@ -4,7 +4,7 @@ from models import Base
 from typing import List
 
 
-class AuthRole(Enum):
+class AuthRole(str, Enum):
     USER = "USER"
     ADMIN = "ADMIN"
 
