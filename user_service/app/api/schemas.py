@@ -3,8 +3,9 @@ from models.Users import AuthRole
 from typing import List
 import uuid
 
+
 class NewUser(BaseModel):
-    name: str = Field(min_length=3, max_length=50)
+    name: str = Field(min_length=3)
     role: AuthRole = Field(default=AuthRole.USER)
 
 class Balance_one_instrument(BaseModel):
