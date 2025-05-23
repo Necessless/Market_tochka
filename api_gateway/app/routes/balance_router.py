@@ -5,7 +5,7 @@ from config import settings
 from schemas.instruments_DTO import Instrument_Base
 from schemas.balance_DTO import Deposit_Withdraw_Instrument_V1
 from httpx_helper import httpx_helper
-from producers.instrument_delete_producer import publish_message
+from producers.base_producer import producer
 
 router = APIRouter(prefix=settings.api.v1.prefix)
 
@@ -60,7 +60,7 @@ async def delete_instrument(
         raise HTTPException(status_code=502, detail="Сервис баланса временно недоступен")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
-    await publish_message(ticker)
+    await producer.publish_message_instrument(ticker)
     return response.json()
 
 @router.get("/balance", tags=['balance'])

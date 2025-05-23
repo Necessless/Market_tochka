@@ -4,7 +4,7 @@ from httpx_helper import httpx_helper
 from schemas.users_DTO import NewUser
 from config import settings
 import uuid
-from producers.user_delete_producer import publish_message
+from producers.base_producer import producer
 from auth_check import api_key_header
 
 router = APIRouter(prefix=settings.api.v1.prefix)
@@ -56,5 +56,5 @@ async def delete_user(
         raise HTTPException(status_code=502, detail="Сервис Пользователей временно недоступен")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
-    await publish_message(user_id)
+    await producer.publish_message_user(user_id)
     return response.json()

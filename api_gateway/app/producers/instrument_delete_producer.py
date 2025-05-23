@@ -16,4 +16,4 @@ async def publish_message(ticker: str):
         message_body = json.dumps({"instrument_ticker": ticker}).encode()
         message = aio_pika.Message(body=message_body)
 
-        await exchange.publish(message, routing_key=queue_name)
+        await exchange.publish(message, routing_key="")

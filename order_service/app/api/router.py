@@ -15,7 +15,7 @@ from .service import (
 )
 import httpx 
 from httpx_helper import httpx_helper
-from producers.order_producer import publish_order
+from producers.order_producer import producer
 from config import settings
 
 router = APIRouter(tags=["order"], prefix=settings.api.v1.prefix)
@@ -90,7 +90,7 @@ async def create_order(
     session.add(order)
     await session.commit()
     await session.refresh(order)
-    await publish_order(order)
+    await producer.publish_order(order)
     return {"success": True, "order_id": order.id}
     
 

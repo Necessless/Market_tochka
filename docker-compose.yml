@@ -18,7 +18,7 @@ services:
       - ./api_gateway/app:/backend/app
 
   rabbitmq:
-    image: rabbitmq:3.13.7
+    image: rabbitmq:4.1.0
     ports:
       - "5672:5672"      
     environment:

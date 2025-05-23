@@ -1,10 +1,14 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
 from config import settings
 from routes.users_router import router as users_router 
 from routes.balance_router import router as balances_router
 from routes.order_router import router as orders_router
+
+
 main_app = FastAPI()
+
 
 @main_app.get("/")
 async def root():

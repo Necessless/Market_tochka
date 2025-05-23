@@ -19,7 +19,7 @@ async def on_message(message: IncomingMessage):
 
 
 async def start_consumer():
-    connection = await connect_robust(RABBITMQ_URL)
+    connection = await connect_robust(RABBITMQ_URL, timeout=10)
     channel = await connection.channel()
     exchange = await channel.declare_exchange("user_deletion_exchange", ExchangeType.FANOUT, durable=True)
     queue = await channel.declare_queue("user_deletion_exchange.BALANCE", durable=True)
