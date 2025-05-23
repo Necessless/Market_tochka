@@ -14,12 +14,13 @@ services:
       - app-network
     env_file:
       - ./api_gateway/.env 
-    restart: always
+    volumes:
+      - ./api_gateway/app:/backend/app
 
   rabbitmq:
-    image: rabbitmq:3.12-management
+    image: rabbitmq:4.0-alpine
     ports:
-      - "5672:5672"       
+      - "5672:5672"      
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
@@ -47,7 +48,8 @@ services:
     env_file:
       - ./user_service/.env  
     restart: always
-
+    volumes:
+      - ./user_service/app:/backend/app
 
   balance_service:
     build:
@@ -62,7 +64,8 @@ services:
     env_file:
       - ./balance_service/.env  
     restart: always
-
+    volumes:
+      - ./balance_service/app:/backend/app
   order_service:
     build:
       context: ./order_service
@@ -76,6 +79,8 @@ services:
     env_file:
       - ./order_service/.env  
     restart: always
+    volumes:
+      - ./order_service/app:/backend/app
     
 
   user_db:
