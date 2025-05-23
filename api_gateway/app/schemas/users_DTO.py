@@ -20,7 +20,7 @@ class UserRegister(UserBase):
 
     
 class NewUser(BaseModel):
-    name: str = Field(min_length=3, max_length=50)
+    name: str = Field(min_length=3, max_length=100)
     role: AuthRole = Field(default=AuthRole.USER)
     @field_validator("role", mode='before')
     def normalize_role(cls, v):
