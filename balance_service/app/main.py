@@ -8,8 +8,9 @@ from api.router import router
 from database import db_helper
 from consumers.user_delete_consumer import start_consumer as start_user_consumer
 from consumers.instrument_delete_consumer import start_consumer as start_instrument_consumer
-import time
 import asyncio
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     #app startup
@@ -22,14 +23,23 @@ async def lifespan(app: FastAPI):
             await session.commit()
     await connect_with_rabbit()
     yield  #back to work cycle
+    for task in consumer_tasks:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
     #app shutdown
     await db_helper.dispose()
 
+consumer_tasks = []
+
 
 async def connect_with_rabbit():
-    time.sleep(7)
-    await asyncio.create_task(start_user_consumer())
-    await asyncio.create_task(start_instrument_consumer())
+    await asyncio.sleep(7)  
+    consumer_tasks.append(asyncio.create_task(start_user_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_instrument_consumer()))
+
 
 main_app = FastAPI(lifespan=lifespan)
 

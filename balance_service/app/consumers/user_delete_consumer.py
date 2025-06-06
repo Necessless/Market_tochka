@@ -2,6 +2,7 @@ from api.service import handle_user_delete
 import json
 from aio_pika import ExchangeType, connect_robust, IncomingMessage
 from config import settings
+import asyncio
 
 RABBITMQ_URL = settings.rabbitmq.url
 
@@ -19,10 +20,16 @@ async def on_message(message: IncomingMessage):
 
 
 async def start_consumer():
-    connection = await connect_robust(RABBITMQ_URL, timeout=10)
-    channel = await connection.channel()
-    exchange = await channel.declare_exchange("user_deletion_exchange", ExchangeType.FANOUT, durable=True)
-    queue = await channel.declare_queue("user_deletion_exchange.BALANCE", durable=True)
-    await queue.bind(exchange)
-    await queue.consume(on_message)
+    while True:
+        try:
+            connection = await connect_robust(RABBITMQ_URL)
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=1)
+            exchange = await channel.declare_exchange("user_deletion_exchange", ExchangeType.FANOUT, durable=True)
+            queue = await channel.declare_queue("user_deletion_exchange.BALANCE", durable=True)
+            await queue.bind(exchange)
+            await queue.consume(on_message)
+            await asyncio.Future()
+        except Exception:
+            print("Ошибка при обработке удаления пользователя в консюмере в сервисе кошелька")
 

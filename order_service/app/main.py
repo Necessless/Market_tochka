@@ -15,14 +15,23 @@ async def lifespan(app: FastAPI):
     await connect_with_rabbit()
     yield #back to work cycle
     #app shutdown
+    for task in consumer_tasks:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
     await db_helper.dispose()
 
 
+consumer_tasks = []
+
+
 async def connect_with_rabbit():
-    time.sleep(7)
-    await asyncio.create_task(start_orders_consumer())
-    await asyncio.create_task(start_users_consumer())
-    await asyncio.create_task(start_instrument_consumer())
+    await asyncio.sleep(7)  
+    consumer_tasks.append(asyncio.create_task(start_orders_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_users_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_instrument_consumer()))
 
 main_app = FastAPI(lifespan=lifespan)
 

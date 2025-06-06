@@ -2,6 +2,7 @@ from api.service import handle_ticker_delete
 import json
 from aio_pika import ExchangeType, connect_robust, IncomingMessage
 from config import settings
+import asyncio
 
 RABBITMQ_URL = settings.rabbitmq.url
 
@@ -17,10 +18,16 @@ async def on_message(message: IncomingMessage):
 
 
 async def start_consumer():
-    connection = await connect_robust(RABBITMQ_URL)
-    channel = await connection.channel()
-    exchange = await channel.declare_exchange("instrument_deletion_exchange", ExchangeType.FANOUT, durable=True)
-    queue = await channel.declare_queue("instrument_deletion_exchange.ORDER", durable=True)
-    await queue.bind(exchange)
-    await queue.consume(on_message)
-
+    while True:
+        try:
+            connection = await connect_robust(RABBITMQ_URL)
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=1)
+            exchange = await channel.declare_exchange("instrument_deletion_exchange", ExchangeType.FANOUT, durable=True)
+            queue = await channel.declare_queue("instrument_deletion_exchange.ORDER", durable=True)
+            await queue.bind(exchange)
+            await queue.consume(on_message)
+            await asyncio.Future()
+        except Exception:
+            print("Ошибка в консюмере удаления инструмента в ордер сервисе")
+            await asyncio.sleep(3)

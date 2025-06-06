@@ -3,6 +3,8 @@ import json
 from aio_pika import connect_robust, IncomingMessage
 from config import settings
 from models import Order
+import asyncio
+
 RABBITMQ_URL = settings.rabbitmq.url
 
 
@@ -18,9 +20,15 @@ async def on_message(message: IncomingMessage):
 
 
 async def start_consumer():
-    connection = await connect_robust(RABBITMQ_URL)
-    channel = await connection.channel()
-    queue = await channel.declare_queue("orders_queue", durable=True)
-    await queue.consume(on_message)
-
+    while True:
+        try:
+            connection = await connect_robust(RABBITMQ_URL)
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=1)
+            queue = await channel.declare_queue("orders_queue", durable=True)
+            await queue.consume(on_message)
+            await asyncio.Future()
+        except Exception:
+            print("Ошибка при обработке создания ордера в консюмере в ордер сервисе")
+            await asyncio.sleep(3)
 

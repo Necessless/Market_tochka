@@ -12,9 +12,9 @@ class Base_Producer:
         self.channel = None
 
     async def connect(self):
-        if self.connection is None or self.connection.is_closed:
+        if not self.connection or self.connection.is_closed:
             self.connection = await aio_pika.connect_robust(self.RABBITMQ_URL)
-        if self.channel is None or self.channel.is_closed:
+        if not self.channel or self.channel.is_closed:
             self.channel = await self.connection.channel()
             await self.channel.set_qos(prefetch_count=5)
 
