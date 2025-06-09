@@ -20,7 +20,12 @@ class Base_Producer:
     async def publish_order(self, order_data: Order):
         await self.connect()
         queue_name = "orders_queue"
-        await self.channel.declare_queue(queue_name, durable=True)
+        await self.channel.declare_queue(queue_name, durable=True, arguments={
+                "x-queue-mode": "lazy",
+                "x-message-ttl": 60000,
+                "x-max-length": 10000,
+                "x-overflow": "drop-head"
+            })
         message_body = json.dumps(order_data.as_dict()).encode()
         message = aio_pika.Message(body=message_body)
         await self.channel.default_exchange.publish(message, routing_key=queue_name)
