@@ -25,12 +25,7 @@ async def start_consumer():
             connection = await connect_robust(RABBITMQ_URL)
             channel = await connection.channel()
             await channel.set_qos(prefetch_count=1)
-            queue = await channel.declare_queue("orders_queue", durable=True, auto_delete=True, arguments={
-                "x-queue-mode": "lazy",
-                "x-message-ttl": 60000,
-                "x-max-length": 10000,
-                "x-overflow": "drop-head"
-            })
+            queue = await channel.declare_queue("orders_queue", durable=True)
             await queue.consume(on_message)
             await asyncio.Future()
         except Exception:

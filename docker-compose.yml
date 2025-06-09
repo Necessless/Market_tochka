@@ -18,9 +18,10 @@ services:
       - ./api_gateway/app:/backend/app
 
   rabbitmq:
-    image: rabbitmq:4.1.0
+    image: rabbitmq:4-management
     ports:
-      - "5672:5672"      
+      - "5672:5672"  
+      - "15672:15672"    
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
