@@ -5,6 +5,7 @@ from config import settings
 import asyncio
 
 RABBITMQ_URL = settings.rabbitmq.url
+shutdown_event = asyncio.Event()
 
 
 async def on_message(message: IncomingMessage):
@@ -20,9 +21,11 @@ async def on_message(message: IncomingMessage):
 
 
 async def start_consumer():
+    delay = 3
     while True:
+        connection = None
         try:
-            connection = await connect_robust(RABBITMQ_URL)
+            connection = await connect_robust(RABBITMQ_URL, timeout=10)
             channel = await connection.channel()
             await channel.set_qos(prefetch_count=1)
             exchange = await channel.declare_exchange("user_deletion_exchange", ExchangeType.FANOUT, durable=True)
@@ -34,7 +37,12 @@ async def start_consumer():
             })
             await queue.bind(exchange)
             await queue.consume(on_message)
-            await asyncio.Future()
+            await shutdown_event.wait()
         except Exception:
             print("Ошибка при обработке удаления пользователя в консюмере в сервисе кошелька")
+            await asyncio.sleep(delay)
+            delay = min(delay*2, 30)
+        finally:
+            if connection and not connection.is_closed:
+                await connection.close()
 
