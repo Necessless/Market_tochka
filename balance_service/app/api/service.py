@@ -5,9 +5,16 @@ from sqlalchemy import delete, select, func
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from schemas.responses import Ok
-from schemas.balance_DTO import Deposit_Withdraw_Instrument_V1, Validate_Balance
+from schemas.balance_DTO import Deposit_Withdraw_Instrument_V1, Transaction_Post, Validate_Balance
 from models import Instrument, Balance, Transaction
 from database import db_helper
+
+
+async def get_balance_for_user_by_ticker(user_id: str, ticker: str):
+    async with db_helper.async_session_factory() as session:
+        query = select(Balance).filter(Balance.user_id == user_id, Balance.instrument_ticker == ticker)
+        result = await session.scalar(query)
+        return result
 
 
 async def get_instrument_by_ticker(
@@ -29,6 +36,8 @@ async def deposit_on_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
             .values(user_id=data.user_id, instrument_ticker=instrument.ticker, _available=data.amount)
             .on_conflict_do_update(index_elements=["user_id", "instrument_ticker"], set_={"available": Balance._available + data.amount})
         )
+        if data.ticker != "RUB" and data.price != 0:
+            await service_create_transaction(data=Transaction_Post(instrument_ticker=data.ticker, amount=data.amount, price=data.price))
         await session.execute(statement)
         await session.commit()
     return Ok()
@@ -116,3 +125,16 @@ async def handle_ticker_delete(ticker: str):
         await session.execute(statement_trans)
         await session.commit()
     
+
+async def service_create_transaction(data: Transaction_Post):
+    async with db_helper.async_session_factory() as session:
+        try:
+            transaction = Transaction(
+                instrument_ticker=data.instrument_ticker, 
+                amount=data.amount,
+                price=data.price,
+            )
+            session.add(transaction)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Cannot create transaction with this ticker, price and amount")
+        await session.commit()

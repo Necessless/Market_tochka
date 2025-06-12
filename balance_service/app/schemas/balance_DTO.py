@@ -34,3 +34,4 @@ class Deposit_Withdraw_Instrument_V1(BaseModel):
     ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
     amount: int = Field(gt=0)
     direction: BalanceDTODirection = Field(default=BalanceDTODirection.DEPOSIT)
+    price: Optional[int] = Field(default=0)

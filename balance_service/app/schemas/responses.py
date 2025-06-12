@@ -10,3 +10,8 @@ class Transaction_Response(BaseModel):
     sub_id: int
     success: bool
     message: str = Field(default="None")
+
+
+class BalanceGetResponse(BaseModel):
+    available: int
+    correlation_id: str

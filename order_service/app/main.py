@@ -11,6 +11,7 @@ from consumers.instrument_delete_consumer import start_consumer as start_instrum
 from consumers.balance_events_consumer import start_consumer as start_balance_consumer
 from producers.order_producer import producer as order_producer
 from producers.balance_producer import producer as balance_producer
+from producers.get_balance_producer import producer as get_balance_producer
 
 shutdown_event = asyncio.Event()
 
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
     await connect_with_rabbit()
     await balance_producer.connect()
     await order_producer.connect()
+    await get_balance_producer.connect()
     yield #back to work cycle
     #app shutdown
     shutdown_event.set()
@@ -32,6 +34,7 @@ async def lifespan(app: FastAPI):
             pass
         except Exception:
             pass
+    await get_balance_producer.close()
     await order_producer.close()
     consumer_tasks.clear()
     await balance_producer.close()

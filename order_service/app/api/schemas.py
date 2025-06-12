@@ -90,3 +90,8 @@ class BaseBalanceDTO(BaseModel):
     correlation_id: str
     sub_id: int
 
+
+class GetBalanceDTO(BaseModel):
+    user_id: str
+    ticker: str
+    correlation_id: str

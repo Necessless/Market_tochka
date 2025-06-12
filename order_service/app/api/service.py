@@ -1,6 +1,6 @@
 from typing import List
 from sqlalchemy import func, select
-from .schemas import  ValidateBalance, L2OrderBook, OrderBook, BalanceDTODirection, BaseBalanceDTO
+from .schemas import L2OrderBook, OrderBook, BalanceDTODirection, BaseBalanceDTO, GetBalanceDTO
 import uuid
 from models.orders import Order_Type, OrderStatus, Order,Direction
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +9,9 @@ from .dependencies import (
     find_orders_for_limit_transaction,
 )
 from database import db_helper
-from config import settings
-import httpx 
 from fastapi import HTTPException
 from producers.balance_producer import producer as balance_producer
+from producers.get_balance_producer import producer as balance_get_producer
 from saga_manager import manager
 import asyncio
 
@@ -51,17 +50,11 @@ async def handle_order_creation(
 
 async def get_balance_by_ticker(
     user_id: uuid.UUID,
-    ticker: str, 
-    client: httpx.AsyncClient
+    ticker: str
 ):
-    try:
-        response = await client.get(url=f"{settings.urls.balances}/v1/balance_ticker/{user_id}/{ticker}")
-        response.raise_for_status()
-    except httpx.RequestError:
-        raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
-    return response.json()
+    corr_id = str(uuid.uuid4)
+    user = str(user_id)
+    return await balance_get_producer.call(GetBalanceDTO(user_id=user, ticker=ticker, correlation_id=corr_id))
 
 
 def check_balance_for_market_buy(balance: int, price: int, amount: int):
@@ -100,10 +93,10 @@ async def make_transaction_messages(
             sub_id=2
         )   
         if direction == Direction.SELL or (direction == Direction.BUY and order_type == Order_Type.LIMIT):
-            data_buyer_add = BaseBalanceDTO(user_id= str(buyer_id), ticker=order_ticker, amount=amount, direction=BalanceDTODirection.DEPOSIT, correlation_id=correlation_id, sub_id=3)
+            data_buyer_add = BaseBalanceDTO(user_id= str(buyer_id), ticker=order_ticker, amount=amount, direction=BalanceDTODirection.DEPOSIT, correlation_id=correlation_id, sub_id=3, price=price)
             data_buyer_remove = BaseBalanceDTO(user_id=str(buyer_id), ticker="RUB", amount=amount*price, direction=BalanceDTODirection.REMOVE, correlation_id=correlation_id, sub_id=4)
         else:
-            data_buyer_add = BaseBalanceDTO(user_id=str(buyer_id), ticker=order_ticker, amount=amount, direction=BalanceDTODirection.DEPOSIT, correlation_id=correlation_id, sub_id=3)
+            data_buyer_add = BaseBalanceDTO(user_id=str(buyer_id), ticker=order_ticker, amount=amount, direction=BalanceDTODirection.DEPOSIT, correlation_id=correlation_id, sub_id=3, price=price)
             data_buyer_remove = BaseBalanceDTO(user_id=str(buyer_id), ticker="RUB", amount=amount*price, direction=BalanceDTODirection.WITHDRAW, correlation_id=correlation_id, sub_id=4)
         messages = [data_seller_add, data_seller_remove, data_buyer_add, data_buyer_remove]
         tasks = [balance_producer.publish_message(msg) for msg in messages]
@@ -143,6 +136,7 @@ async def make_limit_transactions(
         session: AsyncSession
 ):
     try:
+        return_tasks = []
         quantity = order.quantity
         direction = order.direction
         i = 0
@@ -156,15 +150,16 @@ async def make_limit_transactions(
             if (direction == Direction.BUY and order.price > curr_order.price):
                 price = curr_order.price
                 order.reserved_value -= price * amount_to_order
-            if (await make_transaction_messages(
-                direction=direction,
-                seller_id=curr_order.user_id if direction == Direction.BUY else order.user_id,
-                buyer_id=curr_order.user_id if direction == Direction.SELL else order.user_id,
+            saga_data = await make_transaction_messages(
+                direction=order.direction,
+                seller_id=curr_order.user_id if order.direction == Direction.BUY else order.user_id,
+                buyer_id=curr_order.user_id if order.direction == Direction.SELL else order.user_id,
                 order_ticker=order.instrument_ticker,
                 order_type=order.order_type,
                 amount=amount_to_order, 
-                price=price
-            ) == False):
+                price=curr_order.price
+            )
+            if (saga_data == False):
                 print(F"Сага провалилась для ордера:{order.id}")
                 return False
             
@@ -176,7 +171,7 @@ async def make_limit_transactions(
                 curr_order.status = OrderStatus.EXECUTED
                 if curr_order.reserved_value and curr_order.reserved_value > 0:
                     print("ВОЗВРАЩАЕМ НА БАЛАНС ОСТАТОК")
-                    await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
+                    return_tasks.append((curr_order.reserved_value, curr_order.user_id, "RUB"))
             i += 1
             session.add(curr_order)
         print("NO")
@@ -187,8 +182,11 @@ async def make_limit_transactions(
             order.filled = 1
             if curr_order.reserved_value and order.reserved_value > 0:
                 print("ВОЗВРАЩАЕМ НА БАЛАНС ОСТАТОК")
-                await return_to_balance(order.reserved_value, user_id=order.user_id, ticker="RUB")
+                return_tasks.append((order.reserved_value, order.user_id, "RUB"))
         await session.merge(order)
+        await session.commit()
+        # for amount, uid, ticker in return_tasks:
+        #     await return_to_balance(amount, user_id=uid, ticker=ticker)
         return True
     except Exception as e:
         print(f"[ERROR] Ошибка в make_limit_transactions: {str(e)}")
@@ -198,47 +196,50 @@ async def make_limit_transactions(
 async def make_market_transactions(
         order: Order,
         orders_for_transaction: List[Order],
-        session: AsyncSession,
-        client: httpx.AsyncClient
+        session: AsyncSession
 ) -> None: 
-    # quantity = order.quantity
-    # print("TRAAAANS")
-    # balance_rub = await get_balance_by_ticker(ticker="RUB", user_id=order.user_id, client=client)
-    # print(balance_rub)
-    # i = 0
-    # while quantity != 0 and i != len(orders_for_transaction):
-    #     curr_order = orders_for_transaction[i]
-    #     amount_to_order = min(quantity, curr_order.quantity)
-    #     if order.direction == Direction.BUY:
-    #         if not check_balance_for_market_buy(balance_rub['_available'], curr_order.price, amount_to_order):
-    #             order.status = OrderStatus.CANCELLED
-    #             break 
-    #     await (
-    #         direction=order.direction,
-    #         seller_id=curr_order.user_id if order.direction == Direction.BUY else order.user_id,
-    #         buyer_id=curr_order.user_id if order.direction == Direction.SELL else order.user_id,
-    #         order_ticker = order.instrument_ticker,
-    #         order_type = order.order_type,
-    #         amount=amount_to_order, 
-    #         price=curr_order.price,
-    #         client=client
-    #     )
-    #     quantity -= amount_to_order
-    #     curr_order.reserved_value -= curr_order.price * amount_to_order
-    #     curr_order.quantity -= amount_to_order
-    #     curr_order.status = OrderStatus.PARTIALLY_EXECUTED
-    #     if curr_order.quantity == 0:
-    #         curr_order.filled = 1
-    #         curr_order.status = OrderStatus.EXECUTED
-    #         if curr_order.reserved_value and curr_order.reserved_value > 0:
-    #             await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
-    #     i += 1
-    #     session.add(curr_order)
-    # order.quantity = quantity
-    # order.status = OrderStatus.EXECUTED
-    # order.filled = 1 
-    # await session.merge(order)
-    pass
+    try:
+        quantity = order.quantity
+        print("TRAAAANS")
+        balance_rub = await get_balance_by_ticker(ticker="RUB", user_id=order.user_id)
+        print(balance_rub)
+        i = 0
+        while quantity != 0 and i != len(orders_for_transaction):
+            curr_order = orders_for_transaction[i]
+            amount_to_order = min(quantity, curr_order.quantity)
+            if order.direction == Direction.BUY:
+                if not check_balance_for_market_buy(balance_rub['available'], curr_order.price, amount_to_order):
+                    order.status = OrderStatus.CANCELLED
+                    break 
+            saga_data = await make_transaction_messages(
+                direction=order.direction,
+                seller_id=curr_order.user_id if order.direction == Direction.BUY else order.user_id,
+                buyer_id=curr_order.user_id if order.direction == Direction.SELL else order.user_id,
+                order_ticker=order.instrument_ticker,
+                order_type=order.order_type,
+                amount=amount_to_order, 
+                price=curr_order.price
+            )
+            if (saga_data == False):
+                print(F"Сага провалилась для ордера:{order.id}")
+                return 
+            quantity -= amount_to_order
+            curr_order.reserved_value -= curr_order.price * amount_to_order
+            curr_order.quantity -= amount_to_order
+            curr_order.status = OrderStatus.PARTIALLY_EXECUTED
+            if curr_order.quantity == 0:
+                curr_order.filled = 1
+                curr_order.status = OrderStatus.EXECUTED
+                # if curr_order.reserved_value and curr_order.reserved_value > 0:
+                #     await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
+            i += 1
+            session.add(curr_order)
+        order.quantity = quantity
+        order.status = OrderStatus.EXECUTED
+        order.filled = 1 
+        await session.merge(order)
+    except Exception as e:
+        print(f"[ERROR] Ошибка в make_market_transactions: {str(e)}")
 
 
 async def service_retrieve_order(
@@ -258,7 +259,6 @@ async def return_to_balance(amount: int, user_id: uuid.UUID, ticker: str):
     data = BaseBalanceDTO(ticker=ticker, user_id=str(user_id), amount=amount, direction=BalanceDTODirection.UNFREEZE, correlation_id=corr_id, sub_id=-1)
     await balance_producer.publish_message(data)
     
-
 
 async def service_get_orderbook(
         ticker: str,

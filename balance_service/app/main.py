@@ -12,6 +12,7 @@ from consumers.balance_deposit_consumer import start_consumer as start_deposit_c
 from consumers.balance_withdraw_consumer import start_consumer as start_withdraw_consumer
 from consumers.balance_remove_balance_consumer import start_consumer as start_remove_balance_consumer
 from consumers.balance_unfreeze_consumer import start_consumer as start_unfreeze_balance_consumer
+from consumers.balance_retriever_consumer import start_consumer as start_balance_retrieve_consumer
 from producers.transaction_response_producer import producer as transaction_producer
 import asyncio
 
@@ -51,7 +52,7 @@ async def connect_with_rabbit():
     consumer_tasks.append(asyncio.create_task(start_withdraw_consumer()))
     consumer_tasks.append(asyncio.create_task(start_remove_balance_consumer()))
     consumer_tasks.append(asyncio.create_task(start_unfreeze_balance_consumer()))
-
+    consumer_tasks.append(asyncio.create_task(start_balance_retrieve_consumer()))
 
 main_app = FastAPI(lifespan=lifespan)
 

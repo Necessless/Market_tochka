@@ -15,7 +15,9 @@ from .service import (
     deposit_on_balance,
     withdraw_from_balance,
     service_remove_from_reserved,
-    service_unfreeze_balance
+    service_unfreeze_balance,
+    get_balance_for_user_by_ticker,
+    service_create_transaction
 )
 from sqlalchemy import exc
 
@@ -73,12 +75,11 @@ async def get_balance(
 @router.get("/balance_ticker/{user_id}/{ticker}")
 async def get_balance_by_ticker(
     user_id: uuid.UUID,
-    ticker: str,
-    session: AsyncSession = Depends(db_helper.session_getter),
+    ticker: str
 ):
-    query = select(Balance).filter(Balance.user_id == user_id, Balance.instrument_ticker == ticker)
-    result = await session.scalar(query)
-    return result
+    result = await get_balance_for_user_by_ticker(user_id, ticker)
+    return result 
+
 
 @router.post("/balance/validate_balance")
 async def validate_and_freeze_balance_for_operation(
@@ -160,17 +161,8 @@ async def get_transactions_history(
 
 @router.post("/transaction")
 async def create_transaction(
-        data: Transaction_Post,
-        session: AsyncSession = Depends(db_helper.session_getter)
+        data: Transaction_Post
 ):
-    try:
-        transaction = Transaction(
-            instrument_ticker=data.instrument_ticker, 
-            amount=data.amount,
-            price=data.price,
-        )
-        session.add(transaction)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Cannot create transaction with this ticker, price and amount")
-    await session.commit()
+    await service_create_transaction(data)
+    return Ok()
     
