@@ -80,7 +80,6 @@ async def make_transaction_messages(
     price: int
 ):
     try:
-        
         correlation_id = str(uuid.uuid4())
         manager.register(correlation_id, operation_count=4)
         data_seller_add = BaseBalanceDTO(
@@ -100,7 +99,6 @@ async def make_transaction_messages(
             correlation_id=correlation_id,
             sub_id=2
         )   
-        #ПОФИКСИТЬ ФРИЗ И АНФРИЗ
         if direction == Direction.SELL or (direction == Direction.BUY and order_type == Order_Type.LIMIT):
             data_buyer_add = BaseBalanceDTO(user_id= str(buyer_id), ticker=order_ticker, amount=amount, direction=BalanceDTODirection.DEPOSIT, correlation_id=correlation_id, sub_id=3)
             data_buyer_remove = BaseBalanceDTO(user_id=str(buyer_id), ticker="RUB", amount=amount*price, direction=BalanceDTODirection.REMOVE, correlation_id=correlation_id, sub_id=4)
@@ -124,10 +122,10 @@ async def make_transaction_messages(
             print(f"Успешные операции для отката: {successful_ops}")
             
             # Запускаем компенсацию БЕЗ ожидания
-            if successful_ops:
-                # asyncio.create_task(compensate_saga(correlation_id, successful_ops))
+            # if successful_ops:
+            #     asyncio.create_task(compensate_saga(correlation_id, successful_ops))
             # else:
-                manager.cleanup(correlation_id)
+            manager.cleanup(correlation_id)
             return False
             
         else:
@@ -178,7 +176,7 @@ async def make_limit_transactions(
                 curr_order.status = OrderStatus.EXECUTED
                 if curr_order.reserved_value and curr_order.reserved_value > 0:
                     print("ВОЗВРАЩАЕМ НА БАЛАНС ОСТАТОК")
-                    # await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
+                    await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
             i += 1
             session.add(curr_order)
         print("NO")
@@ -189,10 +187,12 @@ async def make_limit_transactions(
             order.filled = 1
             if curr_order.reserved_value and order.reserved_value > 0:
                 print("ВОЗВРАЩАЕМ НА БАЛАНС ОСТАТОК")
-                # await return_to_balance(order.reserved_value, user_id=order.user_id, ticker="RUB")
+                await return_to_balance(order.reserved_value, user_id=order.user_id, ticker="RUB")
         await session.merge(order)
+        return True
     except Exception as e:
         print(f"[ERROR] Ошибка в make_limit_transactions: {str(e)}")
+        return False
 
 
 async def make_market_transactions(
@@ -254,15 +254,10 @@ async def service_retrieve_order(
 
 
 async def return_to_balance(amount: int, user_id: uuid.UUID, ticker: str):
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        try:
-            data = ValidateBalance(ticker=ticker, user_id=user_id, amount=amount)
-            response = await client.post(url=f"{settings.urls.balances}/v1/balance/return_balance", json=data.model_dump(mode="json"))
-            response.raise_for_status()
-        except httpx.RequestError:
-            raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен, не удалось вернуть остаток на счёт")
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Возникла ошибка в сервисе"))
+    corr_id = str(uuid.uuid4())
+    data = BaseBalanceDTO(ticker=ticker, user_id=str(user_id), amount=amount, direction=BalanceDTODirection.UNFREEZE, correlation_id=corr_id, sub_id=-1)
+    await balance_producer.publish_message(data)
+    
 
 
 async def service_get_orderbook(

@@ -26,8 +26,10 @@ async def on_message(message: IncomingMessage):
             await producer.publish_message(Transaction_Response(correlation_id=correlation_id, sub_id=sub_id, success=True))
         except Exception as e:
             print(f"Ошибка при обработке удаления тикера: {str(e)}")
-            await producer.publish_message(Transaction_Response(correlation_id=correlation_id,sub_id=sub_id, success=False, message=str(e)))
-
+            try:
+                await producer.publish_message(Transaction_Response(correlation_id=correlation_id,sub_id=sub_id, success=False, message=str(e)))
+            except Exception as e:
+                print(f"[CRITICAL] Не удалось отправить сообщение об ошибке: {str(e)}")
 
 async def start_consumer():
     delay = 3
@@ -37,7 +39,7 @@ async def start_consumer():
             connection = await connect_robust(RABBITMQ_URL, timeout=10)
             channel = await connection.channel()
             await channel.set_qos(prefetch_count=1)
-            exchange = await channel.declare_exchange("Balance_change_exchange", ExchangeType.FANOUT, durable=True)
+            exchange = await channel.declare_exchange("Balance_change_exchange", ExchangeType.DIRECT, durable=True)
             queue = await channel.declare_queue("Balance_change_exchange.DEPOSIT", durable=True, arguments={
                 "x-queue-mode": "lazy",
                 "x-message-ttl": 60000,

@@ -36,7 +36,7 @@ class BalanceProducer:
 
         if self.channel is None or self.channel.is_closed:
             self.channel = await self.connection.channel()
-            self.exchange = await self.channel.declare_exchange(self.EXCHANGE_NAME, aio_pika.ExchangeType.FANOUT, durable=True)
+            self.exchange = await self.channel.declare_exchange(self.EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=True)
 
     async def close(self):
         if self.channel and not self.channel.is_closed:
@@ -57,7 +57,7 @@ class BalanceProducer:
                 ),
                 timeout=self.PUBLISH_TIMEOUT
             )
-            print(f"Message published")
+            print(f"Publishing: correlation={transaction_data.correlation_id}, sub_id={transaction_data.sub_id}")
         except Exception as e:
             print(f"Failed to publish message: {str(e)}")
             raise

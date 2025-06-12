@@ -14,7 +14,8 @@ from .service import (
     get_balance_for_user,
     deposit_on_balance,
     withdraw_from_balance,
-    service_remove_from_reserved
+    service_remove_from_reserved,
+    service_unfreeze_balance
 )
 from sqlalchemy import exc
 
@@ -107,17 +108,11 @@ async def remove_from_reserved(
 
 @router.post("/balance/return_balance")
 async def unfreeze_balance(
-    data: Validate_Balance,
-    session: AsyncSession = Depends(db_helper.session_getter),
+    data: Validate_Balance
 ):
-    query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id)
-    result = await session.scalar(query)
-    if not result:
-        raise HTTPException(status_code=404, detail="Balance is not found for unfreeze")
-    result.reserved_to_available(data.amount)
-    session.add(result)
-    await session.commit()
-    return result
+    resp = await service_unfreeze_balance(data)
+    return resp
+
 
 @router.post("/admin/balance/deposit", tags=["balance"])
 async def balance_deposit(

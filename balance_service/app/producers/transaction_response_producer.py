@@ -58,7 +58,7 @@ class TransactionResponseProducer:
                 ),
                 timeout=self.PUBLISH_TIMEOUT
             )
-            print("Message published")
+            print(f"Publish answer for correlation = {transaction_data.correlation_id} sub_id = {transaction_data.sub_id}")
         except Exception as e:
             print(f"Failed to publish message: {str(e)}")
             raise

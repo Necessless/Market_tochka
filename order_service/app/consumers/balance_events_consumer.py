@@ -16,6 +16,8 @@ async def on_message(message: IncomingMessage):
             correlation_id = data.get('correlation_id')
             sub_id = data.get('sub_id')
             success = data.get('success', False)
+            if sub_id == -1:
+                return
             manager.record_result(correlation_id, sub_id, success)
         except Exception as e:
             print(f"Ошибка при обработке сообщения о транзакции: {str(e)}")

@@ -5,7 +5,7 @@ from sqlalchemy import delete, select, func
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from schemas.responses import Ok
-from schemas.balance_DTO import BalanceDTODirection, Deposit_Withdraw_Instrument_V1
+from schemas.balance_DTO import Deposit_Withdraw_Instrument_V1, Validate_Balance
 from models import Instrument, Balance, Transaction
 from database import db_helper
 
@@ -51,6 +51,18 @@ async def withdraw_from_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
         await session.commit()
     return Ok()
     
+
+async def service_unfreeze_balance(data: Validate_Balance):
+    async with db_helper.async_session_factory() as session:
+        query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id)
+        result = await session.scalar(query)
+        if not result:
+            raise HTTPException(status_code=404, detail="Balance is not found for unfreeze")
+        result.reserved_to_available(data.amount)
+        session.add(result)
+        await session.commit()
+        return result
+
 
 async def get_balance_for_user(
         session: AsyncSession,
