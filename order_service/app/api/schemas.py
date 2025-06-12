@@ -87,4 +87,6 @@ class BaseBalanceDTO(BaseModel):
     ticker: str
     amount: int
     direction: BalanceDTODirection
-    correlation_id: str = Field(default="NONE")
+    correlation_id: str
+    sub_id: int
+

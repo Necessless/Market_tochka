@@ -14,7 +14,9 @@ async def on_message(message: IncomingMessage):
         try:
             data = json.loads(message.body)
             correlation_id = data.get('correlation_id')
+            sub_id = data.get('sub_id')
             success = data.get('success', False)
+            manager.record_result(correlation_id, sub_id, success)
         except Exception as e:
             print(f"Ошибка при обработке сообщения о транзакции: {str(e)}")
 

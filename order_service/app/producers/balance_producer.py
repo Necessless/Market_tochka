@@ -45,11 +45,6 @@ class BalanceProducer:
             await self.connection.close()
 
     async def publish_message(self, transaction_data: BaseBalanceDTO):
-        
-        correlation_id = uuid.uuid4()
-        transaction_data.correlation_id = correlation_id
-        future = asyncio.get_event_loop().create_future()
-        self._futures[correlation_id] = future
         try:
             message_body = json.dumps(transaction_data.model_dump(mode="json")).encode()
             message = aio_pika.Message(
@@ -63,14 +58,6 @@ class BalanceProducer:
                 timeout=self.PUBLISH_TIMEOUT
             )
             print(f"Message published")
-        try:
-            result = await asyncio.wait_for(future, timeout=10)
-            del self._futures[correlation_id]
-            return result
-        except asyncio.TimeoutError:
-            print(f"No confirmation received for correlation_id={correlation_id}")
-            del self._futures[correlation_id]
-            return False
         except Exception as e:
             print(f"Failed to publish message: {str(e)}")
             raise
