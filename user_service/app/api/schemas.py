@@ -8,11 +8,10 @@ class NewUser(BaseModel):
     name: str = Field(min_length=3)
     role: AuthRole = Field(default=AuthRole.USER)
 
+
 class Balance_one_instrument(BaseModel):
     available: int 
     reserved: int
-
-
 
 
 class UserBase(BaseModel):

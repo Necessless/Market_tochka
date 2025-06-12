@@ -6,16 +6,16 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import ForeignKey, DateTime, func
 
 
-class Direction(str,Enum):
+class Direction(str, Enum):
     BUY = "BUY"
     SELL = "SELL"
 
 
-class Order_Type(str,Enum):
+class Order_Type(str, Enum):
     MARKET = "MARKET"
     LIMIT = "LIMIT"
 
-class OrderStatus(str,Enum):
+class OrderStatus(str, Enum):
     NEW = "NEW"
     EXECUTED = "EXECUTED"
     PARTIALLY_EXECUTED = "PARTIALLY_EXECUTED"

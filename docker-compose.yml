@@ -30,8 +30,9 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: unless-stopped
-    mem_limit: 512m
-    cpus: "0.5"
+    mem_limit: 200m
+    cpus: 0.3
+      
 
   user_service:
     build:

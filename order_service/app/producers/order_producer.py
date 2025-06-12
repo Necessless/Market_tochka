@@ -6,7 +6,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 
-class Base_Producer:
+class OrderProducer:
     RABBITMQ_URL = settings.rabbitmq.url
     CONNECT_TIMEOUT = 10
     QUEUE_NAME = "orders_queue"
@@ -15,35 +15,33 @@ class Base_Producer:
     def __init__(self):
         self.connection = None
         self.channel = None
-        self._lock = asyncio.Lock()
 
-    async def connect(self):
-        async with self._lock:  
-            if self.connection is None or self.connection.is_closed:
-                try:
-                    self.connection = await asyncio.wait_for(
-                        aio_pika.connect_robust(
-                            self.RABBITMQ_URL
-                        ),
-                        timeout=self.CONNECT_TIMEOUT
-                    )
-                    print("Connected to RabbitMQ")
-                except Exception as e:
-                    print(f"Connection failed: {str(e)}")
-                    raise
-
-            if self.channel is None or self.channel.is_closed:
-                self.channel = await self.connection.channel()
-                await self.channel.declare_queue(
-                    self.QUEUE_NAME,
-                    durable=True,
-                    arguments={
-                        "x-queue-mode": "lazy",
-                        "x-message-ttl": 60000,
-                        "x-max-length": 10000,
-                        "x-overflow": "drop-head"
-                    }
+    async def connect(self): 
+        if self.connection is None or self.connection.is_closed:
+            try:
+                self.connection = await asyncio.wait_for(
+                    aio_pika.connect_robust(
+                        self.RABBITMQ_URL
+                    ),
+                    timeout=self.CONNECT_TIMEOUT
                 )
+                print("Connected to RabbitMQ")
+            except Exception as e:
+                print(f"Connection failed: {str(e)}")
+                raise
+
+        if self.channel is None or self.channel.is_closed:
+            self.channel = await self.connection.channel()
+            await self.channel.declare_queue(
+                self.QUEUE_NAME,
+                durable=True,
+                arguments={
+                    "x-queue-mode": "lazy",
+                    "x-message-ttl": 60000,
+                    "x-max-length": 10000,
+                    "x-overflow": "drop-head"
+                }
+            )
 
     @asynccontextmanager
     async def get_channel(self):
@@ -82,5 +80,5 @@ class Base_Producer:
             raise
 
 
-producer = Base_Producer()
+producer = OrderProducer()
 

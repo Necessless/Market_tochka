@@ -8,6 +8,10 @@ from api.router import router
 from database import db_helper
 from consumers.user_delete_consumer import start_consumer as start_user_consumer
 from consumers.instrument_delete_consumer import start_consumer as start_instrument_consumer
+from consumers.balance_deposit_consumer import start_consumer as start_deposit_consumer
+from consumers.balance_withdraw_consumer import start_consumer as start_withdraw_consumer
+from consumers.balance_remove_balance_consumer import start_consumer as start_remove_balance_consumer
+from producers.transaction_response_producer import producer as transaction_producer
 import asyncio
 
 
@@ -22,6 +26,7 @@ async def lifespan(app: FastAPI):
             session.add(rub_ticker)
             await session.commit()
     await connect_with_rabbit()
+    await transaction_producer.connect()
     yield  #back to work cycle
     for task in consumer_tasks:
         task.cancel()
@@ -30,15 +35,20 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
     #app shutdown
+    consumer_tasks.clear()
+    await transaction_producer.close()
     await db_helper.dispose()
 
 consumer_tasks = []
 
 
 async def connect_with_rabbit():
-    await asyncio.sleep(7)  
+    await asyncio.sleep(10)  
     consumer_tasks.append(asyncio.create_task(start_user_consumer()))
     consumer_tasks.append(asyncio.create_task(start_instrument_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_deposit_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_withdraw_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_remove_balance_consumer()))
 
 
 main_app = FastAPI(lifespan=lifespan)

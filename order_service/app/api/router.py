@@ -1,10 +1,10 @@
 import uuid
 from sqlalchemy import select
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from .schemas import Ok, Order_Body_POST, Order_Cancel
+from .schemas import Ok, OrderBodyPOST, OrderCancel
 from models import Order
 from models.orders import Order_Type, Direction, OrderStatus
-from .schemas import Validate_Balance
+from .schemas import ValidateBalance
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import db_helper
 from .dependencies import serialize_orders
@@ -34,7 +34,7 @@ async def get_list_of_orders(
 
 @router.post("/order")
 async def create_order(
-    order_info: Order_Body_POST,
+    order_info: OrderBodyPOST,
     session: AsyncSession = Depends(db_helper.session_getter),
     client: httpx.AsyncClient = Depends(httpx_helper.client_getter)
 ):
@@ -51,7 +51,7 @@ async def create_order(
             freeze = True
             if order.price == None:
                 freeze = False
-            data = Validate_Balance(ticker = order.instrument_ticker, user_id=order_info.user_id, amount = order.quantity, freeze_balance=freeze)
+            data = ValidateBalance(ticker = order.instrument_ticker, user_id=order_info.user_id, amount = order.quantity, freeze_balance=freeze)
             response = await client.post(
                 url=f"{settings.urls.balances}/v1/balance/validate_balance",
                 json=data.model_dump(mode="json"),
@@ -67,7 +67,7 @@ async def create_order(
             )
             response_tick.raise_for_status()
             if order.order_type == Order_Type.LIMIT:
-                data = Validate_Balance(ticker = "RUB", user_id=order.user_id, amount = order.quantity*order.price, freeze_balance=True)
+                data = ValidateBalance(ticker = "RUB", user_id=order.user_id, amount = order.quantity*order.price, freeze_balance=True)
                 response = await client.post(
                     url=f"{settings.urls.balances}/v1/balance/validate_balance",
                     json=data.model_dump(mode="json"),
@@ -76,7 +76,7 @@ async def create_order(
                 order.reserved_value =  order.quantity*order.price
                 response.raise_for_status()
             else:
-                data = Validate_Balance(ticker = "RUB", user_id=order.user_id, amount = order.quantity, freeze_balance=False)
+                data = ValidateBalance(ticker = "RUB", user_id=order.user_id, amount = order.quantity, freeze_balance=False)
                 response = await client.post(
                     url=f"{settings.urls.balances}/v1/balance/validate_balance",
                     json=data.model_dump(mode="json"),
@@ -100,9 +100,6 @@ async def get_orderbook(ticker: str, limit: int = Query(default=10), session: As
     return result
 
 
-
-
-
 @router.get("/order/retrieve/{order_id}")
 async def retrieve_order(
     order_id: uuid.UUID,
@@ -115,7 +112,7 @@ async def retrieve_order(
 
 @router.post("/order/cancel", response_model=Ok)
 async def cancel_order(
-    data: Order_Cancel,
+    data: OrderCancel,
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     query = select(Order).filter(Order.id == data.order_id)

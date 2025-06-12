@@ -23,9 +23,8 @@ class BaseProducer:
                 self.connection = await asyncio.wait_for(
                     aio_pika.connect_robust(
                         self.RABBITMQ_URL,
-                        client_properties={"connection_name": "base_producer"}
-                    ),
-                    timeout=self.CONNECT_TIMEOUT
+                        timeout=self.CONNECT_TIMEOUT
+                    )
                 )
                 print("Connected to RabbitMQ")
 

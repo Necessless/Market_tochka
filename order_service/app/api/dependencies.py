@@ -3,7 +3,7 @@ from fastapi import HTTPException, Depends
 from database import db_helper
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .schemas import Market_Order_Body_GET, Market_Order_GET, Limit_Order_Body_GET, Limit_Order_GET, Order_Body_POST
+from .schemas import MarketOrderBodyGET, MarketOrderGET, LimitOrderBodyGET, LimitOrderGET
 from models import Order
 from models.orders import Direction, Order_Type, OrderStatus
 
@@ -69,12 +69,12 @@ def serialize_orders(
     result = []
     for order in orders:
         if order.order_type == Order_Type.LIMIT:
-            temp = Limit_Order_GET(
+            temp = LimitOrderGET(
                 id=order.id,
                 status=order.status,
                 user_id=order.user_id,
                 timestamp=order.timestamp,
-                body=Limit_Order_Body_GET(
+                body=LimitOrderBodyGET(
                     direction=order.direction,
                     ticker=order.instrument_ticker,
                     qty=order.quantity,
@@ -83,12 +83,12 @@ def serialize_orders(
                 filled=order.filled
             )
         else:
-            temp = Market_Order_GET(
+            temp = MarketOrderGET(
                 id=order.id,
                 status=order.status,
                 user_id=order.user_id,
                 timestamp=order.timestamp,
-                body=Market_Order_Body_GET(
+                body=MarketOrderBodyGET(
                     direction=order.direction,
                     ticker=order.instrument_ticker,
                     qty=order.quantity

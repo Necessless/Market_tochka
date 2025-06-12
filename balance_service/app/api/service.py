@@ -1,11 +1,11 @@
 from typing import Dict
 import uuid
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import delete, select, func
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from schemas.responses import Ok
-from schemas.balance_DTO import Instrument_Base
-from schemas.balance_DTO import Deposit_Withdraw_Instrument_V1
+from schemas.balance_DTO import BalanceDTODirection, Deposit_Withdraw_Instrument_V1
 from models import Instrument, Balance, Transaction
 from database import db_helper
 
@@ -20,6 +20,37 @@ async def get_instrument_by_ticker(
         raise HTTPException(status_code=404, detail="Cant find instrument with this ticker")
     return instrument
 
+
+async def deposit_on_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
+    async with db_helper.async_session_factory() as session:
+        instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
+        statement = (
+            insert(Balance)
+            .values(user_id=data.user_id, instrument_ticker=instrument.ticker, _available=data.amount)
+            .on_conflict_do_update(index_elements=["user_id", "instrument_ticker"], set_={"available": Balance._available + data.amount})
+        )
+        await session.execute(statement)
+        await session.commit()
+    return Ok()
+
+
+async def withdraw_from_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
+    async with db_helper.async_session_factory() as session:
+        query = select(Balance).filter(Balance.user_id == data.user_id, Balance.instrument_ticker == data.ticker)
+        balance = await session.scalar(query)
+        if not balance:
+            raise HTTPException(status_code=404, detail="Instrument with this ticker is not found in user's wallet or user id is not correct")
+        new_quantity = balance.available - data.amount
+        if new_quantity == 0 and balance.reserved == 0:
+            await session.delete(balance)
+        elif new_quantity < 0:
+            raise HTTPException(status_code=400, detail="Insufficient balance")
+        else:
+            balance.available = new_quantity
+            session.add(balance)
+        await session.commit()
+    return Ok()
+    
 
 async def get_balance_for_user(
         session: AsyncSession,
@@ -49,6 +80,20 @@ async def handle_user_delete(user_id: str):
         statement = delete(Balance).filter(Balance.user_id == user_id)
         await session.execute(statement)
         await session.commit()
+
+
+async def service_remove_from_reserved(
+    data: Deposit_Withdraw_Instrument_V1
+):
+    async with db_helper.async_session_factory() as session:
+        query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id)
+        result = await session.scalar(query)
+        if not result:
+            raise HTTPException(status_code=404, detail="Balance is not found for unfreeze")
+        result.remove_from_reserved(data.amount)
+        session.add(result)
+        await session.commit()
+        return result
 
 
 async def handle_ticker_delete(ticker: str):
