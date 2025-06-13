@@ -1,8 +1,9 @@
 from functools import partial
-from api.service import get_balance_for_user_by_ticker
+from api.service import get_balance_for_user_by_ticker, deposit_on_balance
+from schemas.balance_DTO import Deposit_Withdraw_Instrument_V1
 import json
 from uuid import UUID
-from aio_pika import ExchangeType, connect_robust, IncomingMessage, Message
+from aio_pika import connect_robust, IncomingMessage, Message
 from config import settings
 import asyncio
 from schemas.responses import BalanceGetResponse
@@ -14,16 +15,24 @@ shutdown_event = asyncio.Event()
 
 async def on_message(message: IncomingMessage, channel):
     async with message.process():
+        corr_id = None
+        reply_to = message.reply_to  
+        available = 0
+
         try:
             data = json.loads(message.body)
-            user_id = UUID(data.pop("user_id"))
-            corr_id = data.pop("correlation_id")
-            reply_to = message.reply_to
+            corr_id = data.get("correlation_id")
+            user_id = UUID(data.get("user_id"))
+            ticker = data.get("ticker")
 
-            result = await get_balance_for_user_by_ticker(user_id=user_id, ticker=data['ticker'])
+            result = await get_balance_for_user_by_ticker(user_id=user_id, ticker=ticker)
+            available = result._available
+        except Exception as e:
+            print(f"Ошибка обработки запроса баланса: {str(e)}")
 
+        if corr_id and reply_to:
             response = BalanceGetResponse(
-                available=result._available,
+                available=available,
                 correlation_id=corr_id
             )
             response_body = json.dumps(response.model_dump(mode='json')).encode()
@@ -35,9 +44,6 @@ async def on_message(message: IncomingMessage, channel):
                 ),
                 routing_key=reply_to
             )
-
-        except Exception as e:
-            print(f"Ошибка обработки запроса баланса: {str(e)}")
 
 
 async def start_consumer():

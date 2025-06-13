@@ -201,9 +201,7 @@ async def make_market_transactions(
 ) -> None: 
     try:
         quantity = order.quantity
-        print("TRAAAANS")
         balance_rub = await get_balance_by_ticker(ticker="RUB", user_id=order.user_id)
-        print(balance_rub)
         i = 0
         while quantity != 0 and i != len(orders_for_transaction):
             curr_order = orders_for_transaction[i]

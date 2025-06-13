@@ -84,7 +84,7 @@ class BalanceDTODirection(str, Enum):
 
 class BaseBalanceDTO(BaseModel):
     user_id: str
-    ticker: str
+    ticker: str = Field(pattern=r"^[A-Z]{2,10}$")
     amount: int
     direction: BalanceDTODirection
     correlation_id: str
