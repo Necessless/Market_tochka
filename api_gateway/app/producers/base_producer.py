@@ -22,9 +22,9 @@ class BaseProducer:
             if not self.connection or self.connection.is_closed:
                 self.connection = await asyncio.wait_for(
                     aio_pika.connect_robust(
-                        self.RABBITMQ_URL,
-                        timeout=self.CONNECT_TIMEOUT
-                    )
+                        self.RABBITMQ_URL
+                    ),
+                    timeout=self.CONNECT_TIMEOUT
                 )
                 print("Connected to RabbitMQ")
 

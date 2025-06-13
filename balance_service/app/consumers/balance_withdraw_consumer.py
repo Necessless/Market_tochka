@@ -37,7 +37,7 @@ async def start_consumer():
     while True:
         connection = None
         try:
-            connection = await connect_robust(RABBITMQ_URL, =10)
+            connection = await connect_robust(RABBITMQ_URL, timeout=10)
             channel = await connection.channel()
             await channel.set_qos(prefetch_count=1)
             exchange = await channel.declare_exchange("Balance_change_exchange", ExchangeType.DIRECT, durable=True)
