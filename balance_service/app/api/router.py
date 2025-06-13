@@ -45,10 +45,8 @@ async def check_instrument_existance(
     ticker: str,
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    print(ticker)
     query = select(Instrument).filter(Instrument.ticker == ticker)
     result = await session.scalar(query)
-    print(result)
     if not result:
         raise HTTPException(status_code=404, detail="This ticker is not exists")
     
@@ -59,9 +57,13 @@ async def delete_instrument(
     ticker: str,
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    result = await get_instrument_by_ticker(ticker=ticker, session=session)
-    await session.delete(result)
-    await session.commit()
+    try:
+        print(f"Удаляем инструмент: {ticker}")
+        result = await get_instrument_by_ticker(ticker=ticker, session=session)
+        await session.delete(result)
+        await session.commit()
+    except Exception as e:
+        print(f"Ошибка при удалении инструмента: {str(e)}")
     return Ok()
 
 @router.get("/balance/{user_id}")
@@ -92,7 +94,6 @@ async def validate_and_freeze_balance_for_operation(
         raise HTTPException(status_code=409, detail = "Insufficient ammount of funds on balance")
 
     if data.freeze_balance == True:
-        print("фризим баланс")
         result.available_to_reserved(data.amount)
         session.add(result)
         await session.commit()

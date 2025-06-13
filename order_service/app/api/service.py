@@ -52,7 +52,7 @@ async def get_balance_by_ticker(
     user_id: uuid.UUID,
     ticker: str
 ):
-    corr_id = str(uuid.uuid4)
+    corr_id = str(uuid.uuid4())
     user = str(user_id)
     return await balance_get_producer.call(GetBalanceDTO(user_id=user, ticker=ticker, correlation_id=corr_id))
 
@@ -270,24 +270,24 @@ async def service_get_orderbook(
         select(func.sum(Order.quantity), Order.price)
         .filter(
             Order.instrument_ticker == ticker,
-            Order.direction == Direction.BUY,
-            Order.order_type == Order_Type.LIMIT,
-            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
-        )
-        .group_by(Order.price)
-        .order_by(Order.price.desc())
-        .limit(limit)
-    )
-    query_bid = (
-        select(func.sum(Order.quantity), Order.price)
-        .filter(
-            Order.instrument_ticker == ticker,
             Order.direction == Direction.SELL,
             Order.order_type == Order_Type.LIMIT,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
         )
         .group_by(Order.price)
         .order_by(Order.price.asc())
+        .limit(limit)
+    )
+    query_bid = (
+        select(func.sum(Order.quantity), Order.price)
+        .filter(
+            Order.instrument_ticker == ticker,
+            Order.direction == Direction.BUY,
+            Order.order_type == Order_Type.LIMIT,
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+        )
+        .group_by(Order.price)
+        .order_by(Order.price.desc())
         .limit(limit)
     )
     res_ask = await session.execute(query_ask)
@@ -306,7 +306,6 @@ async def service_get_orderbook(
 
 
 async def handle_user_delete(user_id: uuid.UUID):
-    print(user_id)
     async with db_helper.async_session_factory() as session:
         query = select(Order).where(Order.user_id == user_id, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]))
         orders = await session.scalars(query)

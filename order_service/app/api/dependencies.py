@@ -1,11 +1,10 @@
 from typing import List, Sequence
-from fastapi import HTTPException, Depends
-from database import db_helper
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from .schemas import MarketOrderBodyGET, MarketOrderGET, LimitOrderBodyGET, LimitOrderGET
 from models import Order
 from models.orders import Direction, Order_Type, OrderStatus
+
 
 async def find_orders_for_market_transaction(
         order: Order,
@@ -88,7 +87,7 @@ def serialize_orders(
                 status=order.status,
                 user_id=order.user_id,
                 timestamp=order.timestamp,
-                body=MarketOrderBodyGET(
+                body = MarketOrderBodyGET(
                     direction=order.direction,
                     ticker=order.instrument_ticker,
                     qty=order.quantity

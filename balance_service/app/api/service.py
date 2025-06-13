@@ -29,7 +29,6 @@ async def get_instrument_by_ticker(
 
 
 async def deposit_on_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
-    print(data.price)
     async with db_helper.async_session_factory() as session:
         instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
         statement = (
@@ -80,7 +79,6 @@ async def get_balance_for_user(
         session: AsyncSession,
         id: uuid.UUID
 ) -> Dict[str, int]:
-    print(id)
     statement_balance = select(Balance).filter(Balance.user_id == id)
     statement_instrument = select(Instrument)
     statement_balance = statement_balance.cte('balance')
@@ -92,7 +90,6 @@ async def get_balance_for_user(
     )
     result = await session.execute(statement)
     balances = result.all()
-    print(balances)
     if not result:
         raise HTTPException(status_code=404, detail="User is not exists")
     return {ticker: available + reserved for ticker, available, reserved in balances}
@@ -132,7 +129,6 @@ async def handle_ticker_delete(ticker: str):
 async def service_create_transaction(data: Transaction_Post):
     async with db_helper.async_session_factory() as session:
         try:
-            print("создаем транзакции")
             transaction = Transaction(
                 instrument_ticker=data.instrument_ticker, 
                 amount=data.amount,

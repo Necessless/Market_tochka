@@ -13,8 +13,6 @@ async def on_message(message: IncomingMessage):
         try:
             data = json.loads(message.body)
             user_id = data['user_id']
-            print(user_id)
-            print("CONSUMED")
             await handle_user_delete(user_id)
         except Exception as e:
             print(f"Ошибка при обработке удаления пользователя: {e}")

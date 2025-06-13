@@ -16,7 +16,6 @@ shutdown_event = asyncio.Event()
 async def on_message(message: IncomingMessage):
     async with message.process():
         try:
-            print("UNFREEZE Получил сообщение")
             data = json.loads(message.body)
             correlation_id = data.pop("correlation_id")
             user_id = UUID(data.pop("user_id"))

@@ -59,7 +59,11 @@ async def delete_instrument(
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Сервис баланса временно недоступен")
     except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
+        try:
+            detail = e.response.json().get("detail", "Ошибка в сервисе")
+        except Exception:
+            detail = "Ошибка в сервисе"
+        raise HTTPException(status_code=e.response.status_code, detail=detail)
     try:
         await instrument_producer.publish_message_instrument(ticker)
     except Exception:
