@@ -29,6 +29,7 @@ async def get_instrument_by_ticker(
 
 
 async def deposit_on_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
+    print(data.price)
     async with db_helper.async_session_factory() as session:
         instrument = await get_instrument_by_ticker(ticker=data.ticker, session=session)
         statement = (
@@ -36,7 +37,7 @@ async def deposit_on_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
             .values(user_id=data.user_id, instrument_ticker=instrument.ticker, _available=data.amount)
             .on_conflict_do_update(index_elements=["user_id", "instrument_ticker"], set_={"available": Balance._available + data.amount})
         )
-        if data.ticker != "RUB" and data.price != 0:
+        if data.price != 0:
             await service_create_transaction(data=Transaction_Post(instrument_ticker=data.ticker, amount=data.amount, price=data.price))
         await session.execute(statement)
         await session.commit()
@@ -57,6 +58,8 @@ async def withdraw_from_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
         else:
             balance.available = new_quantity
             session.add(balance)
+        if data.price != 0:
+            await service_create_transaction(data=Transaction_Post(instrument_ticker=data.ticker, amount=data.amount, price=data.price))
         await session.commit()
     return Ok()
     
@@ -129,6 +132,7 @@ async def handle_ticker_delete(ticker: str):
 async def service_create_transaction(data: Transaction_Post):
     async with db_helper.async_session_factory() as session:
         try:
+            print("создаем транзакции")
             transaction = Transaction(
                 instrument_ticker=data.instrument_ticker, 
                 amount=data.amount,

@@ -16,6 +16,7 @@ shutdown_event = asyncio.Event()
 async def on_message(message: IncomingMessage):
     async with message.process():
         try:
+            print("UNFREEZE Получил сообщение")
             data = json.loads(message.body)
             correlation_id = data.pop("correlation_id")
             user_id = UUID(data.pop("user_id"))
@@ -45,7 +46,7 @@ async def start_consumer():
                 "x-max-length": 10000,
                 "x-overflow": "drop-head"
                 })
-            await queue.bind(exchange, routing_key="DEPOSIT")
+            await queue.bind(exchange, routing_key="UNFREEZE")
             await queue.consume(on_message)
             await shutdown_event.wait()
         except Exception:

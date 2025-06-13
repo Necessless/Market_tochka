@@ -97,7 +97,7 @@ async def make_transaction_messages(
             data_buyer_remove = BaseBalanceDTO(user_id=str(buyer_id), ticker="RUB", amount=amount*price, direction=BalanceDTODirection.REMOVE, correlation_id=correlation_id, sub_id=4)
         else:
             data_buyer_add = BaseBalanceDTO(user_id=str(buyer_id), ticker=order_ticker, amount=amount, direction=BalanceDTODirection.DEPOSIT, correlation_id=correlation_id, sub_id=3, price=price)
-            data_buyer_remove = BaseBalanceDTO(user_id=str(buyer_id), ticker="RUB", amount=amount*price, direction=BalanceDTODirection.WITHDRAW, correlation_id=correlation_id, sub_id=4)
+            data_buyer_remove = BaseBalanceDTO(user_id=str(buyer_id), ticker="RUB", amount=amount*price, direction=BalanceDTODirection.WITHDRAW, correlation_id=correlation_id, sub_id=4, price=price)
         messages = [data_seller_add, data_seller_remove, data_buyer_add, data_buyer_remove]
         tasks = [balance_producer.publish_message(msg) for msg in messages]
         await asyncio.gather(*tasks)
@@ -114,7 +114,6 @@ async def make_transaction_messages(
             print(f"Провалившиеся операции: {failed_ops}")
             print(f"Успешные операции для отката: {successful_ops}")
             
-            # Запускаем компенсацию БЕЗ ожидания
             # if successful_ops:
             #     asyncio.create_task(compensate_saga(correlation_id, successful_ops))
             # else:
@@ -185,10 +184,12 @@ async def make_limit_transactions(
                 return_tasks.append((order.reserved_value, order.user_id, "RUB"))
         await session.merge(order)
         await session.commit()
-        # for amount, uid, ticker in return_tasks:
-        #     await return_to_balance(amount, user_id=uid, ticker=ticker)
+        for amount, uid, ticker in return_tasks:
+            await return_to_balance(amount, user_id=uid, ticker=ticker)
+            return_tasks.clear()
         return True
     except Exception as e:
+        return_tasks.clear()
         print(f"[ERROR] Ошибка в make_limit_transactions: {str(e)}")
         return False
 
@@ -230,8 +231,8 @@ async def make_market_transactions(
             if curr_order.quantity == 0:
                 curr_order.filled = 1
                 curr_order.status = OrderStatus.EXECUTED
-                # if curr_order.reserved_value and curr_order.reserved_value > 0:
-                #     await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
+                if curr_order.reserved_value and curr_order.reserved_value > 0:
+                    await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
             i += 1
             session.add(curr_order)
         order.quantity = quantity

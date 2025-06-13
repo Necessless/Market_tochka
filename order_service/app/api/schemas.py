@@ -89,6 +89,7 @@ class BaseBalanceDTO(BaseModel):
     direction: BalanceDTODirection
     correlation_id: str
     sub_id: int
+    price: Optional[int] = Field(default=0)
 
 
 class GetBalanceDTO(BaseModel):
