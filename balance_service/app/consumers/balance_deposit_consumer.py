@@ -16,7 +16,6 @@ shutdown_event = asyncio.Event()
 async def on_message(message: IncomingMessage):
     async with message.process():
         try:
-            print(f"Получены данные для обработки: {data}")
             data = json.loads(message.body)
             correlation_id = data.pop("correlation_id")
             sub_id = data.pop("sub_id")

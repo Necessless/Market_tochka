@@ -29,12 +29,12 @@ async def add_instrument(
     data: Instrument_Base,
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    async with session.begin():
-        try:
-            instrument = Instrument(name=data.name, ticker=data.ticker)
-            session.add(instrument)
-        except exc.IntegrityError:
-            raise HTTPException(status_code=409, detail="This ticker already exists")
+    instrument = Instrument(name=data.name, ticker=data.ticker)
+    session.add(instrument)
+    try:
+        await session.commit()  
+    except exc.IntegrityError:
+        raise HTTPException(status_code=409, detail="This ticker already exists")
     return Instrument_Base(
         name=instrument.name,
         ticker=instrument.ticker

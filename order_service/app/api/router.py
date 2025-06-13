@@ -118,18 +118,21 @@ async def cancel_order(
     order = await session.scalar(query)
     if order is None:
         raise HTTPException(status_code=404, detail="Order with this id is not found")
-    if order.status in [OrderStatus.EXECUTED, OrderStatus.CANCELLED]:
+    if order.status in [OrderStatus.PARTIALLY_EXECUTED, OrderStatus.EXECUTED, OrderStatus.CANCELLED]:
         raise HTTPException(status_code=409, detail="This order is already cancelled or executed")
-    if order.user_id == data.req_id or data.role == "ADMIN":
-        order.status = OrderStatus.CANCELLED
-        if order.order_type == Order_Type.LIMIT:
-            if order.direction == Direction.BUY:
-                value_to_return = order.quantity * order.price
-                ticker = "RUB"
-            else:
-                value_to_return = order.quantity
-                ticker = order.instrument_ticker
-            await return_to_balance(value_to_return, order.user_id, ticker)
+    if order.order_type == Order_Type.MARKET:
+        raise HTTPException(status_code=409, detail="Cannot cancel market order")
+    if order.user_id != data.req_id and data.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    order.status = OrderStatus.CANCELLED
+    if order.order_type == Order_Type.LIMIT:
+        if order.direction == Direction.BUY:
+            value_to_return = order.quantity * order.price
+            ticker = "RUB"
+        else:
+            value_to_return = order.quantity
+            ticker = order.instrument_ticker
+        await return_to_balance(value_to_return, order.user_id, ticker)
     session.add(order)
     await session.commit()
     return Ok()

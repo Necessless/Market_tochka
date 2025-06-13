@@ -173,14 +173,12 @@ async def make_limit_transactions(
                     return_tasks.append((curr_order.reserved_value, curr_order.user_id, "RUB"))
             i += 1
             session.add(curr_order)
-        print("NO")
         order.quantity = quantity
         order.status = OrderStatus.PARTIALLY_EXECUTED
         if quantity == 0:
             order.status = OrderStatus.EXECUTED
             order.filled = 1
             if curr_order.reserved_value and order.reserved_value > 0:
-                print("ВОЗВРАЩАЕМ НА БАЛАНС ОСТАТОК")
                 return_tasks.append((order.reserved_value, order.user_id, "RUB"))
         await session.merge(order)
         await session.commit()
@@ -270,7 +268,8 @@ async def service_get_orderbook(
             Order.instrument_ticker == ticker,
             Order.direction == Direction.SELL,
             Order.order_type == Order_Type.LIMIT,
-            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
+            Order.quantity > 0
         )
         .group_by(Order.price)
         .order_by(Order.price.asc())
@@ -282,7 +281,8 @@ async def service_get_orderbook(
             Order.instrument_ticker == ticker,
             Order.direction == Direction.BUY,
             Order.order_type == Order_Type.LIMIT,
-            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])
+            ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
+            Order.quantity > 0
         )
         .group_by(Order.price)
         .order_by(Order.price.desc())
