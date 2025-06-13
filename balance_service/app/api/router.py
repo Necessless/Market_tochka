@@ -60,6 +60,8 @@ async def delete_instrument(
     try:
         print(f"Удаляем инструмент: {ticker}")
         result = await get_instrument_by_ticker(ticker=ticker, session=session)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Cant find instrument with this ticker")
         await session.delete(result)
         await session.commit()
     except Exception as e:

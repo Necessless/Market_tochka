@@ -39,7 +39,6 @@ async def create_order(
     client: httpx.AsyncClient = Depends(httpx_helper.client_getter)
 ):
     price = order_info.price
-    print(order_info)
     order = Order(instrument_ticker=order_info.ticker, quantity=order_info.qty, price=order_info.price, direction=order_info.direction, user_id=order_info.user_id)
     if price is not None:
         order.order_type = Order_Type.LIMIT
