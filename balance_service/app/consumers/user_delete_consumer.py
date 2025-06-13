@@ -25,7 +25,7 @@ async def start_consumer():
     while True:
         connection = None
         try:
-            connection = await connect_robust(RABBITMQ_URL, timeout=10)
+            connection = await connect_robust(RABBITMQ_URL)
             channel = await connection.channel()
             await channel.set_qos(prefetch_count=1)
             exchange = await channel.declare_exchange("user_deletion_exchange", ExchangeType.FANOUT, durable=True)

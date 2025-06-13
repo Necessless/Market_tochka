@@ -29,6 +29,7 @@ services:
       - app-network
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     restart: unless-stopped
     mem_limit: 200m
     cpus: 0.3
