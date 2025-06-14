@@ -87,14 +87,14 @@ async def create_order(
         raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
-    if order.order_type == Order_Type.MARKET:
-        try:
-            orders_for_transaction = await find_orders_for_market_transaction(order, session)#3
-            if not orders_for_transaction or sum([ord.quantity for ord in orders_for_transaction]) < order.quantity:
-                order.status = OrderStatus.CANCELLED
-                raise HTTPException(status_code=409, detail="Cant create market order")
-        except Exception:
-            raise HTTPException(status_code=409, detail="Cant create market order")
+    # if order.order_type == Order_Type.MARKET:
+    #     try:
+    #         orders_for_transaction = await find_orders_for_market_transaction(order, session)#3
+    #         if not orders_for_transaction or sum([ord.quantity for ord in orders_for_transaction]) < order.quantity:
+    #             order.status = OrderStatus.CANCELLED
+    #             raise HTTPException(status_code=409, detail="Cant create market order")
+    #     except Exception:
+    #         raise HTTPException(status_code=409, detail="Cant create market order")
     session.add(order)
     await session.commit()
     await session.refresh(order)

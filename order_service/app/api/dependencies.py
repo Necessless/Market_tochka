@@ -15,7 +15,6 @@ async def find_orders_for_market_transaction(
             Order.instrument_ticker == order.instrument_ticker,
             Order.direction == Direction.BUY,
             Order.order_type == Order_Type.LIMIT,
-            Order.filled == 0,
             Order.price > 0,
             Order.quantity > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
@@ -26,7 +25,6 @@ async def find_orders_for_market_transaction(
             Order.direction == Direction.SELL,
             Order.order_type == Order_Type.LIMIT,
             Order.price > 0,
-            Order.filled == 0,
             Order.quantity > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
             ).order_by(Order.price.asc()).with_for_update(skip_locked=True)
