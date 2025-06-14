@@ -92,6 +92,7 @@ async def create_order(
             orders_for_transaction = await find_orders_for_market_transaction(order, session)#3
             if not orders_for_transaction or sum([ord.quantity for ord in orders_for_transaction]) < order.quantity:
                 order.status = OrderStatus.CANCELLED
+                raise HTTPException(status_code=409, detail="Cant create market order")
         except Exception:
             raise HTTPException(status_code=409, detail="Cant create market order")
     session.add(order)
