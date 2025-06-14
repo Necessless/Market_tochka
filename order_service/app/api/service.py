@@ -229,7 +229,6 @@ async def make_market_transactions(
                     await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
             i += 1
             session.add(curr_order)
-        order.quantity = quantity
         order.status = OrderStatus.EXECUTED
         await session.merge(order)
         await session.commit()
