@@ -267,7 +267,7 @@ async def service_get_orderbook(
             Order.direction == Direction.SELL,
             Order.order_type == Order_Type.LIMIT,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            Order.quantity > 0
+            (Order.quantity - Order.filled) > 0
         )
         .group_by(Order.price)
         .order_by(Order.price.asc())
@@ -280,7 +280,7 @@ async def service_get_orderbook(
             Order.direction == Direction.BUY,
             Order.order_type == Order_Type.LIMIT,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            Order.quantity > 0
+            (Order.quantity - Order.filled) > 0
         )
         .group_by(Order.price)
         .order_by(Order.price.desc())
