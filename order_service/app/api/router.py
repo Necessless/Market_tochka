@@ -121,7 +121,7 @@ async def cancel_order(
     data: OrderCancel,
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
-    query = select(Order).filter(Order.id == data.order_id)
+    query = select(Order).filter(Order.id == data.order_id).with_for_update()
     order = await session.scalar(query)
     if order is None:
         raise HTTPException(status_code=404, detail="Order with this id is not found")

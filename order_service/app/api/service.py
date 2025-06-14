@@ -178,7 +178,7 @@ async def make_limit_transactions(
         await session.commit()
         for amount, uid, ticker in return_tasks:
             await return_to_balance(amount, user_id=uid, ticker=ticker)
-            return_tasks.clear()
+        return_tasks.clear()
         return True
     except Exception as e:
         return_tasks.clear()
@@ -201,7 +201,9 @@ async def make_market_transactions(
             if order.direction == Direction.BUY:
                 if not check_balance_for_market_buy(balance_rub['available'], curr_order.price, amount_to_order):
                     order.status = OrderStatus.CANCELLED
-                    break 
+                    await session.merge(order)
+                    await session.commit()
+                    return
             saga_data = await make_transaction_messages(
                 direction=order.direction,
                 seller_id=curr_order.user_id if order.direction == Direction.BUY else order.user_id,
@@ -229,6 +231,7 @@ async def make_market_transactions(
         order.status = OrderStatus.EXECUTED
         order.filled = 1 
         await session.merge(order)
+        await session.commit()
     except Exception as e:
         print(f"[ERROR] Ошибка в make_market_transactions: {str(e)}")
 

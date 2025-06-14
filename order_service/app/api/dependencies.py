@@ -19,7 +19,7 @@ async def find_orders_for_market_transaction(
             Order.price > 0,
             Order.quantity > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.desc()).with_for_update()
+            ).order_by(Order.price.desc()).with_for_update(skip_locked=True)
     else:
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
@@ -29,7 +29,7 @@ async def find_orders_for_market_transaction(
             Order.filled == 0,
             Order.quantity > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.asc()).with_for_update()
+            ).order_by(Order.price.asc()).with_for_update(skip_locked=True)
     orders = await session.scalars(query)
     return orders.all()
 
@@ -47,7 +47,7 @@ async def find_orders_for_limit_transaction(
             Order.price >= order.price,
             Order.quantity > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.desc()).with_for_update()
+            ).order_by(Order.price.desc()).with_for_update(skip_locked=True)
     else:
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
@@ -57,7 +57,7 @@ async def find_orders_for_limit_transaction(
             Order.filled == 0,
             Order.quantity > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.asc()).with_for_update()
+            ).order_by(Order.price.asc()).with_for_update(skip_locked=True)
     orders = await session.scalars(query)
     return orders.all()
 

@@ -27,7 +27,6 @@ async def create_instrument(
     client: httpx.AsyncClient = Depends(httpx_helper.client_getter),
     requester_info: tuple[str, str] = Depends(api_key_header)
 ):
-    print(data.model_dump())
     user_id, role = requester_info
     if role != "ADMIN":
         raise HTTPException(status_code=403, detail="Недостаточно прав для доступа")
