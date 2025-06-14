@@ -37,13 +37,7 @@ async def handle_order_creation(
                             return
                 else:
                     orders_for_transaction = await find_orders_for_market_transaction(order_info, session)#3
-                    if not orders_for_transaction or sum([order.quantity for order in orders_for_transaction]) < order_info.quantity:
-                        print("Cancelling market order")
-                        order_info.status = OrderStatus.CANCELLED
-                        print(order_info.id)
-                        await session.merge(order_info)
-                    else:
-                        await make_market_transactions(order_info, orders_for_transaction,session=session)#4,5
+                    await make_market_transactions(order_info, orders_for_transaction,session=session)#4,5
             except Exception as e:
                 print(f"[ERROR] Ошибка при создании ордера: {str(e)}")
 
@@ -305,7 +299,7 @@ async def service_get_orderbook(
 
 async def handle_user_delete(user_id: uuid.UUID):
     async with db_helper.async_session_factory() as session:
-        query = select(Order).where(Order.user_id == user_id, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]))
+        query = select(Order).where(Order.user_id == user_id, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])).with_for_update()
         orders = await session.scalars(query)
         for order in orders.all():
             order.status = OrderStatus.CANCELLED
@@ -315,7 +309,7 @@ async def handle_user_delete(user_id: uuid.UUID):
 
 async def handle_ticker_delete(ticker: str):
     async with db_helper.async_session_factory() as session:
-        query = select(Order).where(Order.instrument_ticker == ticker, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]))
+        query = select(Order).where(Order.instrument_ticker == ticker, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])).with_for_update()
         orders = await session.scalars(query)
         for order in orders.all():
             order.status = OrderStatus.CANCELLED

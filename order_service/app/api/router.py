@@ -11,7 +11,8 @@ from .dependencies import serialize_orders
 from .service import (
     service_retrieve_order,
     service_get_orderbook,
-    return_to_balance
+    return_to_balance,
+    find_orders_for_market_transaction
 )
 import httpx 
 from httpx_helper import httpx_helper
@@ -86,12 +87,18 @@ async def create_order(
         raise HTTPException(status_code=502, detail="Сервис кошелька временно недоступен")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", "Ошибка в сервисе"))
+    if order.order_type == Order_Type.MARKET:
+        try:
+            orders_for_transaction = await find_orders_for_market_transaction(order, session)#3
+            if not orders_for_transaction or sum([ord.quantity for ord in orders_for_transaction]) < order.quantity:
+                order.status = OrderStatus.CANCELLED
+        except Exception:
+            raise HTTPException(status_code=409, detail="Cant create market order")
     session.add(order)
     await session.commit()
     await session.refresh(order)
     await producer.publish_order(order)
     return {"success": True, "order_id": order.id}
-    
 
 @router.get("/public/orderbook/{ticker}")
 async def get_orderbook(ticker: str, limit: int = Query(default=10), session: AsyncSession = Depends(db_helper.session_getter)):

@@ -17,7 +17,7 @@ class OrderBodyPOST(BaseModel):
 class MarketOrderBodyGET(BaseModel):
     direction: Direction
     ticker: str
-    qty: int = Field()
+    qty: int = Field(ge=0)
 
 
 class LimitOrderBodyGET(MarketOrderBodyGET):
