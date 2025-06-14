@@ -135,7 +135,8 @@ async def make_limit_transactions(
         i = 0
         while quantity != 0 and i != len(orders_for_transaction):
             curr_order = orders_for_transaction[i]
-            amount_to_order = min(quantity, curr_order.quantity)
+            curr_quantity = curr_order.quantity - curr_order.filled
+            amount_to_order = min(quantity, curr_quantity)
             price = curr_order.price
             if (direction == Direction.SELL and order.price < curr_order.price):
                 price = order.price
@@ -157,21 +158,20 @@ async def make_limit_transactions(
                 return False
             
             quantity -= amount_to_order
-            curr_order.quantity -= amount_to_order
+            order.filled += amount_to_order
+            curr_quantity -= amount_to_order
+            curr_order.filled += amount_to_order
             curr_order.status = OrderStatus.PARTIALLY_EXECUTED
-            if curr_order.quantity == 0:
-                curr_order.filled = 1
+            if curr_quantity == 0:
                 curr_order.status = OrderStatus.EXECUTED
                 if curr_order.reserved_value and curr_order.reserved_value > 0:
                     print("ВОЗВРАЩАЕМ НА БАЛАНС ОСТАТОК")
                     return_tasks.append((curr_order.reserved_value, curr_order.user_id, "RUB"))
             i += 1
             session.add(curr_order)
-        order.quantity = quantity
         order.status = OrderStatus.PARTIALLY_EXECUTED
         if quantity == 0:
             order.status = OrderStatus.EXECUTED
-            order.filled = 1
             if curr_order.reserved_value and order.reserved_value > 0:
                 return_tasks.append((order.reserved_value, order.user_id, "RUB"))
         await session.merge(order)
@@ -197,7 +197,8 @@ async def make_market_transactions(
         i = 0
         while quantity != 0 and i != len(orders_for_transaction):
             curr_order = orders_for_transaction[i]
-            amount_to_order = min(quantity, curr_order.quantity)
+            curr_quantity = curr_order.quantity - curr_order.filled
+            amount_to_order = min(quantity, curr_quantity)
             if order.direction == Direction.BUY:
                 if not check_balance_for_market_buy(balance_rub['available'], curr_order.price, amount_to_order):
                     order.status = OrderStatus.CANCELLED
@@ -217,11 +218,12 @@ async def make_market_transactions(
                 print(F"Сага провалилась для ордера:{order.id}")
                 return 
             quantity -= amount_to_order
+            order.filled += amount_to_order
             curr_order.reserved_value -= curr_order.price * amount_to_order
-            curr_order.quantity -= amount_to_order
+            curr_quantity -= amount_to_order
+            curr_order.filled += amount_to_order
             curr_order.status = OrderStatus.PARTIALLY_EXECUTED
             if curr_order.quantity == 0:
-                curr_order.filled = 1
                 curr_order.status = OrderStatus.EXECUTED
                 if curr_order.reserved_value and curr_order.reserved_value > 0:
                     await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
@@ -229,7 +231,6 @@ async def make_market_transactions(
             session.add(curr_order)
         order.quantity = quantity
         order.status = OrderStatus.EXECUTED
-        order.filled = 1 
         await session.merge(order)
         await session.commit()
     except Exception as e:
