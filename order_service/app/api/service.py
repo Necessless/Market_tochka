@@ -159,10 +159,9 @@ async def make_limit_transactions(
             
             quantity -= amount_to_order
             order.filled += amount_to_order
-            curr_quantity -= amount_to_order
             curr_order.filled += amount_to_order
             curr_order.status = OrderStatus.PARTIALLY_EXECUTED
-            if curr_quantity == 0:
+            if curr_order.filled == curr_order.quantity:
                 curr_order.status = OrderStatus.EXECUTED
                 if curr_order.reserved_value and curr_order.reserved_value > 0:
                     print("ВОЗВРАЩАЕМ НА БАЛАНС ОСТАТОК")
@@ -220,10 +219,9 @@ async def make_market_transactions(
             quantity -= amount_to_order
             order.filled += amount_to_order
             curr_order.reserved_value -= curr_order.price * amount_to_order
-            curr_quantity -= amount_to_order
             curr_order.filled += amount_to_order
             curr_order.status = OrderStatus.PARTIALLY_EXECUTED
-            if curr_quantity == 0:
+            if curr_order.quantity == curr_order.filled:
                 curr_order.status = OrderStatus.EXECUTED
                 if curr_order.reserved_value and curr_order.reserved_value > 0:
                     await return_to_balance(curr_order.reserved_value, user_id=curr_order.user_id, ticker="RUB")
