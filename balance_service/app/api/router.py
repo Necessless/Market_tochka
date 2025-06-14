@@ -5,9 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import db_helper
 from config import settings
-from typing import Sequence
+from typing import List, Sequence
 from models import Transaction, Balance, Instrument
-from schemas.balance_DTO import Instrument_Base, Deposit_Withdraw_Instrument_V1, Validate_Balance, Transaction_Post
+from schemas.balance_DTO import Instrument_Base, Deposit_Withdraw_Instrument_V1, Validate_Balance, Transaction_Post, TransactionSchema
 from schemas.responses import Ok 
 from .service import (
     get_instrument_by_ticker,
@@ -152,7 +152,7 @@ async def get_all_instruments(
     return result.all()
 
 
-@router.get("/public/transactions/{ticker}")
+@router.get("/public/transactions/{ticker}", response_model=List[TransactionSchema])
 async def get_transactions_history(
     ticker: str,
     limit: int = Query(default=10),
@@ -160,7 +160,8 @@ async def get_transactions_history(
 ):
     query = select(Transaction).filter(Transaction.instrument_ticker == ticker).limit(limit)
     result = await session.scalars(query)
-    return result.all()
+    transactions = result.all()
+    return [TransactionSchema.model_validate(tx) for tx in transactions]
 
 @router.post("/transaction")
 async def create_transaction(

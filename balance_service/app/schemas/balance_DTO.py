@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 import uuid
@@ -35,3 +36,15 @@ class Deposit_Withdraw_Instrument_V1(BaseModel):
     amount: int = Field(gt=0)
     direction: BalanceDTODirection = Field(default=BalanceDTODirection.DEPOSIT)
     price: Optional[int] = Field(default=0)
+
+
+class TransactionSchema(BaseModel):
+    ticker: str = Field(..., alias="instrument_ticker")
+    amount: int
+    price: int
+    timestamp: datetime
+
+    model_config = {
+        "from_attributes": True,  
+        "populate_by_name": True  
+    }
