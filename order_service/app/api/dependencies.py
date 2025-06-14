@@ -16,18 +16,18 @@ async def find_orders_for_market_transaction(
             Order.direction == Direction.BUY,
             Order.order_type == Order_Type.LIMIT,
             Order.price > 0,
-            Order.quantity > 0,
+            (Order.quantity - Order.filled) > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.desc()).with_for_update(skip_locked=True)
+            ).order_by(Order.price.desc()).with_for_update()
     else:
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
             Order.direction == Direction.SELL,
             Order.order_type == Order_Type.LIMIT,
+            (Order.quantity - Order.filled) > 0,
             Order.price > 0,
-            Order.quantity > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.asc()).with_for_update(skip_locked=True)
+            ).order_by(Order.price.asc()).with_for_update()
     orders = await session.scalars(query)
     return orders.all()
 
@@ -42,18 +42,18 @@ async def find_orders_for_limit_transaction(
             Order.direction == Direction.BUY,
             Order.order_type == Order_Type.LIMIT,
             Order.price >= order.price,
-            Order.quantity > 0,
+            (Order.quantity - Order.filled) > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.desc()).with_for_update(skip_locked=True)
+            ).order_by(Order.price.desc()).with_for_update()
     else:
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
             Order.direction == Direction.SELL,
             Order.order_type == Order_Type.LIMIT,
             Order.price <= order.price,
-            Order.quantity > 0,
+            (Order.quantity - Order.filled) > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.asc()).with_for_update(skip_locked=True)
+            ).order_by(Order.price.asc()).with_for_update()
     orders = await session.scalars(query)
     return orders.all()
 
