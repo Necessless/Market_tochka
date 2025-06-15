@@ -16,7 +16,6 @@ from saga_manager import manager
 import asyncio
 
 
-
 async def handle_order_creation(
         order_info: Order,
         session: AsyncSession
@@ -34,7 +33,6 @@ async def handle_order_creation(
                     success = await make_limit_transactions(order_info, orders_for_transaction, session=session)
                     if not success:
                         print("Откат транзакций, ошибка в саге")
-                        await session.rollback()
                         return
             else:
                 orders_for_transaction = await find_orders_for_market_transaction(order_info, session)#3
