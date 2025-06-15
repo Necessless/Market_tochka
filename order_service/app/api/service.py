@@ -258,7 +258,7 @@ async def service_get_orderbook(
         session: AsyncSession
 ) -> OrderBook:
     query_ask = (
-        select(func.sum(Order.quantity), Order.price)
+        select(Order.price, func.sum(Order.quantity - Order.filled).label("qty"),)
         .filter(
             Order.instrument_ticker == ticker,
             Order.direction == Direction.SELL,
@@ -271,7 +271,7 @@ async def service_get_orderbook(
         .limit(limit)
     )
     query_bid = (
-        select(func.sum(Order.quantity), Order.price)
+        select(Order.price, func.sum(Order.quantity - Order.filled).label("qty"))
         .filter(
             Order.instrument_ticker == ticker,
             Order.direction == Direction.BUY,
