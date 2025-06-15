@@ -33,8 +33,8 @@ async def add_instrument(
     session.add(instrument)
     try:
         await session.commit()  
-    except exc.IntegrityError:
-        raise HTTPException(status_code=409, detail="This ticker already exists")
+    except exc.IntegrityError as e:
+        print(str(e))
     return Instrument_Base(
         name=instrument.name,
         ticker=instrument.ticker
