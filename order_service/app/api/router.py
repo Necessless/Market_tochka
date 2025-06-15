@@ -12,7 +12,8 @@ from .service import (
     service_retrieve_order,
     service_get_orderbook,
     return_to_balance,
-    find_orders_for_market_transaction
+    find_orders_for_market_transaction,
+    handle_order_creation
 )
 import httpx 
 from httpx_helper import httpx_helper
@@ -98,7 +99,7 @@ async def create_order(
     session.add(order)
     await session.commit()
     await session.refresh(order)
-    await producer.publish_order(order)
+    await handle_order_creation(order)
     return {"success": True, "order_id": order.id}
 
 @router.get("/public/orderbook/{ticker}")
