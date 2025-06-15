@@ -97,9 +97,8 @@ async def create_order(
     #     except Exception:
     #         raise HTTPException(status_code=409, detail="Cant create market order")
     session.add(order)
+    await handle_order_creation(order, session)
     await session.commit()
-    await session.refresh(order)
-    await handle_order_creation(order)
     return {"success": True, "order_id": order.id}
 
 @router.get("/public/orderbook/{ticker}")
