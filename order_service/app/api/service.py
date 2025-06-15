@@ -36,8 +36,13 @@ async def handle_order_creation(
         else:
             orders_for_transaction = await find_orders_for_market_transaction(order_info, session)#3
             await make_market_transactions(order_info, orders_for_transaction,session=session)#4,5
+            if not orders_for_transaction or sum([ord.quantity for ord in orders_for_transaction]) < order_info.quantity:
+                order_info.status = OrderStatus.CANCELLED
+                await session.merge(order_info)
+                raise HTTPException(status_code=409, detail="Cant create market order")
     except Exception as e:
         print(f"[ERROR] Ошибка при создании ордера: {str(e)}")
+        raise
 
 
 async def get_balance_by_ticker(
