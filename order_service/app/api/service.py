@@ -300,7 +300,7 @@ async def service_get_orderbook(
 
 async def handle_user_delete(user_id: uuid.UUID):
     async with db_helper.async_session_factory() as session:
-        query = select(Order).where(Order.user_id == user_id, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])).with_for_update()
+        query = select(Order).where(Order.user_id == user_id, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]))
         orders = await session.scalars(query)
         for order in orders.all():
             order.status = OrderStatus.CANCELLED
@@ -310,7 +310,7 @@ async def handle_user_delete(user_id: uuid.UUID):
 
 async def handle_ticker_delete(ticker: str):
     async with db_helper.async_session_factory() as session:
-        query = select(Order).where(Order.instrument_ticker == ticker, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED])).with_for_update()
+        query = select(Order).where(Order.instrument_ticker == ticker, ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]))
         orders = await session.scalars(query)
         for order in orders.all():
             order.status = OrderStatus.CANCELLED

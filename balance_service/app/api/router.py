@@ -90,7 +90,7 @@ async def validate_and_freeze_balance_for_operation(
     data: Validate_Balance,
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id).with_for_update()
+    query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id)
     result = await session.scalar(query)
     if not result or result.available < data.amount:
         raise HTTPException(status_code=409, detail = "Insufficient ammount of funds on balance")

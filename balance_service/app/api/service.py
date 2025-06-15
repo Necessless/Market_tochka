@@ -45,7 +45,7 @@ async def deposit_on_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
 
 async def withdraw_from_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
     async with db_helper.async_session_factory() as session:
-        query = select(Balance).filter(Balance.user_id == data.user_id, Balance.instrument_ticker == data.ticker).with_for_update()
+        query = select(Balance).filter(Balance.user_id == data.user_id, Balance.instrument_ticker == data.ticker)
         balance = await session.scalar(query)
         if not balance:
             raise HTTPException(status_code=404, detail="Instrument with this ticker is not found in user's wallet or user id is not correct")
@@ -65,7 +65,7 @@ async def withdraw_from_balance(data: Deposit_Withdraw_Instrument_V1) -> Ok:
 
 async def service_unfreeze_balance(data: Validate_Balance):
     async with db_helper.async_session_factory() as session:
-        query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id).with_for_update()
+        query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id)
         result = await session.scalar(query)
         if not result:
             raise HTTPException(status_code=404, detail="Balance is not found for unfreeze")
@@ -107,7 +107,7 @@ async def service_remove_from_reserved(
     data: Deposit_Withdraw_Instrument_V1
 ):
     async with db_helper.async_session_factory() as session:
-        query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id).with_for_update()
+        query = select(Balance).filter(Balance.instrument_ticker == data.ticker, Balance.user_id == data.user_id)
         result = await session.scalar(query)
         if not result:
             raise HTTPException(status_code=404, detail="Balance is not found for unfreeze")

@@ -18,7 +18,7 @@ async def find_orders_for_market_transaction(
             Order.price > 0,
             (Order.quantity - Order.filled) > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.desc()).with_for_update()
+            ).order_by(Order.price.desc())
     else:
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
@@ -27,7 +27,7 @@ async def find_orders_for_market_transaction(
             (Order.quantity - Order.filled) > 0,
             Order.price > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.asc()).with_for_update()
+            ).order_by(Order.price.asc())
     orders = await session.scalars(query)
     return orders.all()
 
@@ -44,7 +44,7 @@ async def find_orders_for_limit_transaction(
             Order.price >= order.price,
             (Order.quantity - Order.filled) > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.desc()).with_for_update()
+            ).order_by(Order.price.desc())
     else:
         query = select(Order).where(
             Order.instrument_ticker == order.instrument_ticker,
@@ -53,7 +53,7 @@ async def find_orders_for_limit_transaction(
             Order.price <= order.price,
             (Order.quantity - Order.filled) > 0,
             ~Order.status.in_([OrderStatus.CANCELLED, OrderStatus.EXECUTED]),
-            ).order_by(Order.price.asc()).with_for_update()
+            ).order_by(Order.price.asc())
     orders = await session.scalars(query)
     return orders.all()
 
