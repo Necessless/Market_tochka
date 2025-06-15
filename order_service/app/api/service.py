@@ -287,8 +287,8 @@ async def service_get_orderbook(
     res_ask = res_ask.all()
     res_bid = res_bid.all()
     
-    res_ask = [L2OrderBook(price=price, qty=qty) for qty, price in res_ask]
-    res_bid = [L2OrderBook(price=price, qty=qty) for qty, price in res_bid]
+    res_ask = [L2OrderBook(price=price, qty=qty) for price, qty in res_ask]
+    res_bid = [L2OrderBook(price=price, qty=qty) for price, qty in res_bid]
 
     return OrderBook(
         bid_levels=res_bid,
