@@ -25,20 +25,19 @@ async def handle_order_creation(
     # 3 находим ордеры для выполнения ордера
     # 4 производим транзакции 
     # 5 меняем статус ордера и сохраняем
-    async with session.begin():
-        try:
-            if order_info.price:
-                orders_for_transaction = await find_orders_for_limit_transaction(order_info, session)
-                if orders_for_transaction:
-                    success = await make_limit_transactions(order_info, orders_for_transaction, session=session)
-                    if not success:
-                        print("Откат транзакций, ошибка в саге")
-                        return
-            else:
-                orders_for_transaction = await find_orders_for_market_transaction(order_info, session)#3
-                await make_market_transactions(order_info, orders_for_transaction,session=session)#4,5
-        except Exception as e:
-            print(f"[ERROR] Ошибка при создании ордера: {str(e)}")
+    try:
+        if order_info.price:
+            orders_for_transaction = await find_orders_for_limit_transaction(order_info, session)
+            if orders_for_transaction:
+                success = await make_limit_transactions(order_info, orders_for_transaction, session=session)
+                if not success:
+                    print("Откат транзакций, ошибка в саге")
+                    return
+        else:
+            orders_for_transaction = await find_orders_for_market_transaction(order_info, session)#3
+            await make_market_transactions(order_info, orders_for_transaction,session=session)#4,5
+    except Exception as e:
+        print(f"[ERROR] Ошибка при создании ордера: {str(e)}")
 
 
 async def get_balance_by_ticker(
